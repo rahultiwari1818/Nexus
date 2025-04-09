@@ -1,0 +1,12 @@
+src\main\java\com\Nexus_Library\dao\BookDAO.class
+src\main\java\com\Nexus_Library\model\EBook.class
+src\main\java\com\Nexus_Library\app\MainApp.class
+src\main\java\com\Nexus_Library\config\DBConnection.class
+src\main\java\com\Nexus_Library\model\Journal.class
+src\main\java\com\Nexus_Library\model\Book.class
+src\main\java\com\Nexus_Library\controllers\LibraryController.class
+src\main\java\com\Nexus_Library\model\User.class
+src\main\java\com\Nexus_Library\services\BookServices.class
+src\main\java\com\Nexus_Library\utils\DateUtils.class
+src\main\java\com\Nexus_Library\services\UserServices.class
+src\main\java\com\Nexus_Library\config\AppConfig.class

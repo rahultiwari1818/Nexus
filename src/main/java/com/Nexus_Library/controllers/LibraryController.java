@@ -1,4 +1,4 @@
-package src.main.java.com.Nexus_Library.controllers;
+package com.Nexus_Library.controllers;
 
 public class LibraryController {
 }

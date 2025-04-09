@@ -1,0 +1,12 @@
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\app\MainApp.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\model\EBook.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\controllers\LibraryController.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\utils\DateUtils.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\config\AppConfig.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\model\User.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\model\Journal.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\services\BookServices.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\services\UserServices.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\model\Book.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\config\DBConnection.java
+D:\Java_and_DSA\Nexus-LibraryManagementSystem\src\main\java\com\Nexus_Library\dao\BookDAO.java
