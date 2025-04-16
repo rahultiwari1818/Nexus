@@ -1,13 +1,17 @@
 package com.Nexus_Library.model;
 
-import java.sql.Date;
+import java.sql.Timestamp;
 
 public class Loan {
-    private int loanId, userId, resourceId;
-    private Date borrowDate, dueDate, returnDate;
+    private int loanId;
+    private int userId;
+    private int resourceId;
+    private Timestamp borrowDate;
+    private Timestamp dueDate;
+    private Timestamp returnDate;
     private String status;
 
-    public Loan(int loanId, int userId, int resourceId, Date borrowDate, Date dueDate, Date returnDate, String status) {
+    public Loan(int loanId, int userId, int resourceId, Timestamp borrowDate, Timestamp dueDate, Timestamp returnDate, String status) {
         this.loanId = loanId;
         this.userId = userId;
         this.resourceId = resourceId;
@@ -17,61 +21,17 @@ public class Loan {
         this.status = status;
     }
 
-    // Getters and setters
+    // Getters
+    public int getLoanId() { return loanId; }
+    public int getUserId() { return userId; }
+    public int getResourceId() { return resourceId; }
+    public Timestamp getBorrowDate() { return borrowDate; }
+    public Timestamp getDueDate() { return dueDate; }
+    public Timestamp getReturnDate() { return returnDate; }
+    public String getStatus() { return status; }
 
-    public int getLoanId() {
-        return loanId;
-    }
-
-    public void setLoanId(int loanId) {
-        this.loanId = loanId;
-    }
-
-    public int getUserId() {
-        return userId;
-    }
-
-    public void setUserId(int userId) {
-        this.userId = userId;
-    }
-
-    public int getResourceId() {
-        return resourceId;
-    }
-
-    public void setResourceId(int resourceId) {
-        this.resourceId = resourceId;
-    }
-
-    public Date getBorrowDate() {
-        return borrowDate;
-    }
-
-    public void setBorrowDate(Date borrowDate) {
-        this.borrowDate = borrowDate;
-    }
-
-    public Date getDueDate() {
-        return dueDate;
-    }
-
-    public void setDueDate(Date dueDate) {
-        this.dueDate = dueDate;
-    }
-
-    public Date getReturnDate() {
-        return returnDate;
-    }
-
-    public void setReturnDate(Date returnDate) {
-        this.returnDate = returnDate;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
+    @Override
+    public String toString() {
+        return "Loan{loanId=" + loanId + ", userId=" + userId + ", resourceId=" + resourceId + "}";
     }
 }
