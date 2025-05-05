@@ -2,6 +2,7 @@ package com.Nexus_Library.dao;
 
 import com.Nexus_Library.config.DBConnection;
 import com.Nexus_Library.model.User;
+import com.Nexus_Library.pattern.creational.UserFactory;
 
 import java.sql.*;
 import java.util.*;
@@ -37,12 +38,9 @@ public class UserDAO {
             stmt.setString(2, password);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return new User(rs.getInt("user_id"), rs.getString("first_name"), rs.getString("last_name"),
-                        rs.getString("email"), rs.getString("password"), rs.getTimestamp("registration_date"),
-                        rs.getString("role")) {
-                    @Override public int getBorrowLimit() { return 0; } // Default, overridden by subclasses
-                    @Override public boolean canAccessResearchPapers() { return false; }
-                };
+                return UserFactory.createUser(rs.getString("role"),rs.getInt("user_id"), rs.getString("first_name"), rs.getString("last_name"),
+                        rs.getString("email"), rs.getString("password"), rs.getTimestamp("registration_date")
+                        );
             }
             return null;
         }
@@ -55,12 +53,8 @@ public class UserDAO {
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
-                users.add(new User(rs.getInt("user_id"), rs.getString("first_name"), rs.getString("last_name"),
-                        rs.getString("email"), rs.getString("password"), rs.getTimestamp("registration_date"),
-                        rs.getString("role")) {
-                    @Override public int getBorrowLimit() { return 0; } // Default, overridden by subclasses
-                    @Override public boolean canAccessResearchPapers() { return false; }
-                });
+                users.add(UserFactory.createUser(rs.getString("role"),rs.getInt("user_id"), rs.getString("first_name"), rs.getString("last_name"),
+                        rs.getString("email"), rs.getString("password"), rs.getTimestamp("registration_date")));
             }
         }
         return users;

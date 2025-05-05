@@ -62,7 +62,12 @@ public class UserController {
             return false;
         }
 
+
+
         User user = UserFactory.createUser(role, 0, firstName, lastName, email, password, new Timestamp(System.currentTimeMillis()));
+
+
+
         try {
             boolean success = userDAO.registerUser(user);
             if (success) {
