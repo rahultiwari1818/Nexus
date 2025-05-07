@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Scanner;
 import java.util.Arrays;
 import java.util.regex.Pattern;
@@ -111,52 +112,48 @@ public class LibraryItemController {
         }
     }
 
-    public boolean updateAvailability(int itemId, boolean isAvailable) {
-        if (loggedInUser == null || !"Admin".equals(loggedInUser.getRole())) {
-            System.out.println("❌ Only Admin can update availability.");
-            return false;
-        }
+
+
+
+
+    public void searchLibraryItem() {
+        System.out.print("Enter Search Query: ");
+        String query = scanner.nextLine();
+
         try {
-            String query = "UPDATE library_items SET is_available = ? WHERE item_id = ?";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setBoolean(1, isAvailable);
-                stmt.setInt(2, itemId);
-                int rowsAffected = stmt.executeUpdate();
-                return rowsAffected > 0;
+            List<LibraryItem> items = itemDAO.searchLibraryItems(query);
+
+            if (items == null || items.isEmpty()) {
+                System.out.println("⚠️ No items found matching your query.");
+                return;
             }
+
+            // Print header
+            System.out.printf("%-5s %-30s %-20s %-15s %-12s %-20s %-15s %-20s%n",
+                    "ID", "Title", "Author", "ISBN", "Available", "Added Date", "Type");
+
+            // Print separator
+            System.out.println("-------------------------------------------------------------------------------------------------------------");
+
+            // Print each item
+            for (LibraryItem item : items) {
+                System.out.printf("%-5d %-30s %-20s %-15s %-12s %-20s %-15s %-20s%n",
+                        item.getItemId(),
+                        item.getTitle(),
+                        item.getAuthor() != null ? item.getAuthor() : "N/A",
+                        item.getIsbn() != null ? item.getIsbn() : "N/A",
+                        item.isAvailable() ? "Yes" : "No",
+                        item.getAddedDate().toString(),
+                        item.getItemType()
+                );
+            }
+
         } catch (Exception e) {
-            System.out.println("❌ Error updating availability: " + e.getMessage());
-            return false;
+            System.out.println("❌ An error occurred while searching for library items.");
+            e.printStackTrace();
         }
     }
 
-    public LibraryItem getItemById(int itemId) {
-        try {
-            String query = "SELECT * FROM library_items WHERE item_id = ?";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, itemId);
-                ResultSet rs = stmt.executeQuery();
-                if (rs.next()) {
-                    String type = rs.getString("type");
-                    return LibraryItemFactory.createItem(
-                            type.toLowerCase(),
-                            rs.getInt("item_id"),
-                            rs.getString("title"),
-                            rs.getString("author"),
-                            rs.getString("isbn"),
-                            rs.getBoolean("is_available"),
-                            rs.getTimestamp("added_date"),
-                            rs.getString("extra_param")
-                    );
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("❌ Error retrieving item: " + e.getMessage());
-        }
-        return null;
-    }
 
     // Validation methods
     public boolean isValidName(String name) {

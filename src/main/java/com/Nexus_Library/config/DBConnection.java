@@ -36,7 +36,7 @@ public class DBConnection {
             if (conn.isClosed()) {
                 throw new SQLException("Created connection is closed!");
             }
-            System.out.println("DB Connected");
+//            System.out.println("DB Connected");
             return conn;
         } catch (SQLException e) {
             e.printStackTrace();

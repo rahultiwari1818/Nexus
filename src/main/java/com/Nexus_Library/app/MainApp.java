@@ -20,9 +20,10 @@ public class MainApp {
             if (loggedInUser == null) {
                 // Show login/registration menu if not logged in
                 System.out.println("\n===== Welcome to Nexus Library =====");
-                System.out.println("1. Register");
-                System.out.println("2. Login");
-                System.out.println("3. Exit");
+                System.out.println("1. Register : ");
+                System.out.println("2. Login : ");
+                System.out.println("3. Search Book : ");
+                System.out.println("4. Exit : ");
                 System.out.print("Enter your choice (1-3): ");
 
                 int choice;
@@ -48,6 +49,9 @@ public class MainApp {
                         }
                         break;
                     case 3:
+
+                        break;
+                    case 4:
                         System.out.println("👋 Exiting... Thank you for using Nexus Library!");
                         userController.close();
                         libraryItemController.close();
@@ -56,97 +60,69 @@ public class MainApp {
                     default:
                         System.out.println("⚠️ Invalid choice. Please enter a number between 1 and 3.");
                 }
-            } else {
-                // Show operational menu if logged in
-                System.out.println("\n===== Nexus Library - Welcome, " + loggedInUser.getFirstName() + " (" + loggedInUser.getRole() + ") =====");
-                System.out.println("1. Borrow Book");
-                System.out.println("2. Return Book");
-                System.out.println("3. View Current Borrowings");
-                System.out.println("4. View Borrowing History");
-                System.out.println("5. Pay Fine");
-                System.out.println("6. Update Profile");
-                if ("Admin".equals(loggedInUser.getRole())) {
-                    System.out.println("7. Add Library Item");
-                    System.out.println("8. Delete Book");
-                    System.out.println("9. Update Book Info");
-                    System.out.println("10. Take Fine");
-                    System.out.println("11. Logout");
-                } else {
-                    System.out.println("7. Logout");
-                }
-                System.out.print("Enter your choice (1-" + (loggedInUser.getRole().equals("Admin") ? "11" : "7") + "): ");
+            }
+            else if (loggedInUser.getRole().equals("Admin")) {
+                // Show Admin menu
+                System.out.println("\n=== Admin Menu ===");
+                System.out.println("1. Add Library Item");
+                System.out.println("2. Delete Book");
+                System.out.println("3. Update Book Info");
+                System.out.println("4. Take Fine");
+                System.out.println("5. Update Profile");
+                System.out.println("6. View Users");
+                System.out.println("7. Logout");
+
+                System.out.print("Enter your choice (1-6): ");
 
                 int choice;
                 try {
                     choice = scanner.nextInt();
                     scanner.nextLine(); // Consume newline
                 } catch (Exception e) {
-                    System.out.println("❌ Invalid input. Please enter a number (1-" + (loggedInUser.getRole().equals("Admin") ? "11" : "7") + ").");
+                    System.out.println("❌ Invalid input. Please enter a number between 1 and 6.");
                     scanner.nextLine(); // Clear invalid input
-                    continue;
+                    return; // Exit the method or loop iteration
                 }
 
                 switch (choice) {
                     case 1:
-                        libraryController.borrowBook();
+                        libraryItemController.addItem();
                         break;
                     case 2:
-                        libraryController.returnBook();
+                        libraryController.deleteBook();
                         break;
                     case 3:
-                        libraryController.viewCurrentBorrowings();
+                        libraryController.updateBookInfo();
                         break;
                     case 4:
-                        libraryController.viewBorrowingHistory();
+                        libraryController.takeFine();
                         break;
                     case 5:
-                        libraryController.payFine();
-                        break;
-                    case 6:
                         libraryController.updateProfile();
                         break;
+                    case 6 :
+                        userController.getUsers();
+                        break;
                     case 7:
-                        if ("Admin".equals(loggedInUser.getRole())) {
-                            libraryItemController.addItem();
-                        } else {
-                            userController.getLoggedInUser().setUserId(0); // Reset loggedInUser indirectly
-                            loggedInUser = null; // Log out
-                            System.out.println("✅ Logged out successfully!");
-                        }
-                        break;
-                    case 8:
-                        if ("Admin".equals(loggedInUser.getRole())) {
-                            libraryController.deleteBook();
-                        } else {
-                            System.out.println("⚠️ Invalid choice for your role.");
-                        }
-                        break;
-                    case 9:
-                        if ("Admin".equals(loggedInUser.getRole())) {
-                            libraryController.updateBookInfo();
-                        } else {
-                            System.out.println("⚠️ Invalid choice for your role.");
-                        }
-                        break;
-                    case 10:
-                        if ("Admin".equals(loggedInUser.getRole())) {
-                            libraryController.takeFine();
-                        } else {
-                            System.out.println("⚠️ Invalid choice for your role.");
-                        }
-                        break;
-                    case 11:
-                        if ("Admin".equals(loggedInUser.getRole())) {
-                            userController.getLoggedInUser().setUserId(0); // Reset loggedInUser indirectly
-                            loggedInUser = null; // Log out
-                            System.out.println("✅ Logged out successfully!");
-                        } else {
-                            System.out.println("⚠️ Invalid choice for your role.");
-                        }
+                        userController.setLoggedInUserToNull();
+                        loggedInUser = null;
+                        System.out.println("✅ Logged out successfully!");
                         break;
                     default:
-                        System.out.println("⚠️ Invalid choice. Please enter a number between 1 and " + (loggedInUser.getRole().equals("Admin") ? "11" : "7") + ".");
+                        System.out.println("⚠️ Invalid choice. Please enter a number between 1 and 6.");
                 }
+            }
+            else{
+                System.out.println("\n===== Nexus Library - Welcome, " + loggedInUser.getFirstName() + " (" + loggedInUser.getRole() + ") =====");
+                System.out.println("1. Borrow Book");
+                System.out.println("2. Return Book");
+                System.out.println("3. View Current Borrowings");
+                System.out.println("4. View Borrowing History");
+                System.out.println("5. Pay Fine");
+                System.out.println("6. Search Book");
+                System.out.println("7. Update Profile");
+                System.out.println("8. Logout");
+
             }
         }
     }

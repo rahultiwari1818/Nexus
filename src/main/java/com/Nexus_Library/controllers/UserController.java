@@ -5,7 +5,9 @@ import com.Nexus_Library.model.User;
 import com.Nexus_Library.pattern.creational.UserFactory;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
@@ -54,7 +56,7 @@ public class UserController {
             return false;
         }
 
-        String[] validRoles = {"faculty", "student", "admin", "researcher"};
+        String[] validRoles = {"faculty", "student", "researcher"};
         System.out.print("Role (" + String.join(", ", validRoles) + "): ");
         String role = scanner.nextLine().trim();
         if (role.isEmpty() || !Arrays.asList(validRoles).contains(role.toLowerCase())) {
@@ -63,9 +65,7 @@ public class UserController {
         }
 
 
-
         User user = UserFactory.createUser(role, 0, firstName, lastName, email, password, new Timestamp(System.currentTimeMillis()));
-
 
 
         try {
@@ -122,8 +122,38 @@ public class UserController {
         }
     }
 
+    public void getUsers() {
+        System.out.println("Enter Search Query : ");
+        String query = scanner.nextLine();
+        try {
+            List<User> users = userDAO.getAllUsers(query);
+
+            System.out.printf("%-5s %-15s %-15s %-30s %-20s %-20s%n",
+                    "ID", "First Name", "Last Name", "Email", "Role", "Registered");
+
+            System.out.println("-----------------------------------------------------------------------------------------------------------------------------");
+
+            for (User usr : users) {
+                System.out.printf("%-5d %-15s %-15s %-30s %-20s %-20s%n",
+                        usr.getUserId(),
+                        usr.getFirstName(),
+                        usr.getLastName(),
+                        usr.getEmail(),
+                        usr.getRole(),
+                        usr.getRegistrationDate().toString());
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ Error during login: " + e.getMessage());
+        }
+    }
+
     public User getLoggedInUser() {
         return loggedInUser;
+    }
+
+    public void setLoggedInUserToNull() {
+        loggedInUser = null;
     }
 
     public void close() {

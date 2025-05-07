@@ -1,6 +1,7 @@
 package com.Nexus_Library.controllers;
 
 import com.Nexus_Library.config.DBConnection;
+import com.Nexus_Library.dao.LibraryItemDAO;
 import com.Nexus_Library.dao.UserDAO;
 import com.Nexus_Library.model.*;
 
@@ -16,12 +17,14 @@ public class LibraryController {
     private final LibraryItemController itemController;
     private final Scanner scanner;
     private User loggedInUser; // Track the logged-in user
+    private LibraryItemDAO libraryItemDAO;
 
     public LibraryController() {
         this.userDAO = new UserDAO();
         this.itemController = new LibraryItemController();
         this.scanner = new Scanner(System.in);
         this.loggedInUser = null; // Set after login
+        this.libraryItemDAO = new LibraryItemDAO();
     }
 
     public void setLoggedInUser(User user) {
@@ -45,7 +48,7 @@ public class LibraryController {
             return false;
         }
 
-        LibraryItem item = itemController.getItemById(itemId);
+        LibraryItem item = libraryItemDAO.getItemById(itemId);
         if (item == null) {
             System.out.println("❌ Item not found.");
             return false;
@@ -55,25 +58,14 @@ public class LibraryController {
             return false;
         }
 
+
         try {
-            String query = "INSERT INTO transactions (user_id, item_id, transaction_type, due_date, status) VALUES (?, ?, ?, ?, ?)";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, loggedInUser.getUserId());
-                stmt.setInt(2, itemId);
-                stmt.setString(3, "Borrow");
-                stmt.setTimestamp(4, new Timestamp(System.currentTimeMillis() + (item.getMaxBorrowDays() * 24 * 60 * 60 * 1000L)));
-                stmt.setString(5, "Active");
-                int rowsAffected = stmt.executeUpdate();
-                if (rowsAffected > 0 && itemController.updateAvailability(itemId, false)) {
-                    System.out.println("✅ Book borrowed successfully! Due date: " + new Timestamp(System.currentTimeMillis() + (item.getMaxBorrowDays() * 24 * 60 * 60 * 1000L)));
-                    return true;
-                }
-            }
-        } catch (Exception e) {
+            return libraryItemDAO.borrowBook(loggedInUser, itemId, item);
+        } catch (SQLException e) {
             System.out.println("❌ Error borrowing book: " + e.getMessage());
         }
         return false;
+
     }
 
     public boolean returnBook() {
@@ -91,27 +83,15 @@ public class LibraryController {
             return false;
         }
 
+        LibraryItem item = libraryItemDAO.getItemById(itemId);;
+
         try {
-            String query = "UPDATE transactions SET return_date = ?, status = ? WHERE user_id = ? AND item_id = ? AND status = 'Active'";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-                stmt.setString(2, "Completed");
-                stmt.setInt(3, loggedInUser.getUserId());
-                stmt.setInt(4, itemId);
-                int rowsAffected = stmt.executeUpdate();
-                if (rowsAffected > 0 && itemController.updateAvailability(itemId, true)) {
-                    System.out.println("✅ Book returned successfully!");
-                    checkAndApplyFine(itemId); // Check for overdue and apply fine if needed
-                    return true;
-                } else {
-                    System.out.println("❌ No active borrowing found for this item.");
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("❌ Error returning book: " + e.getMessage());
+            return libraryItemDAO.borrowBook(loggedInUser, itemId, item);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
-        return false;
+
     }
 
     public void viewCurrentBorrowings() {
@@ -121,17 +101,7 @@ public class LibraryController {
         }
 
         try {
-            String query = "SELECT item_id FROM transactions WHERE user_id = ? AND status = 'Active'";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, loggedInUser.getUserId());
-                ResultSet rs = stmt.executeQuery();
-                List<Integer> borrowedItems = new ArrayList<>();
-                while (rs.next()) {
-                    borrowedItems.add(rs.getInt("item_id"));
-                }
-                System.out.println("Current Borrowings (" + borrowedItems.size() + "): " + borrowedItems);
-            }
+
         } catch (Exception e) {
             System.out.println("❌ Error retrieving borrowings: " + e.getMessage());
         }
@@ -320,7 +290,7 @@ public class LibraryController {
             return false;
         }
 
-        LibraryItem item = itemController.getItemById(itemId);
+        LibraryItem item = libraryItemDAO.getItemById(itemId);
         if (item == null) {
             System.out.println("❌ Item not found.");
             return false;
@@ -442,43 +412,13 @@ public class LibraryController {
         return false;
     }
 
+
     // Helper methods
     private boolean isValidRole() {
         return loggedInUser != null && Arrays.asList("Student", "Faculty", "Researcher").contains(loggedInUser.getRole());
     }
 
-    private void checkAndApplyFine(int itemId) {
-        try {
-            String query = "SELECT due_date FROM transactions WHERE user_id = ? AND item_id = ? AND status = 'Active'";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, loggedInUser.getUserId());
-                stmt.setInt(2, itemId);
-                ResultSet rs = stmt.executeQuery();
-                if (rs.next()) {
-                    Timestamp dueDate = rs.getTimestamp("due_date");
-                    if (System.currentTimeMillis() > dueDate.getTime()) {
-                        double fineAmount = calculateFine(dueDate);
-                        String updateQuery = "UPDATE transactions SET fine_amount = ?, status = 'Overdue' WHERE user_id = ? AND item_id = ? AND status = 'Active'";
-                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
-                            updateStmt.setDouble(1, fineAmount);
-                            updateStmt.setInt(2, loggedInUser.getUserId());
-                            updateStmt.setInt(3, itemId);
-                            updateStmt.executeUpdate();
-                            System.out.println("⚠️ Overdue! Fine of $" + fineAmount + " applied.");
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("❌ Error checking fine: " + e.getMessage());
-        }
-    }
 
-    private double calculateFine(Timestamp dueDate) {
-        long daysOverdue = (System.currentTimeMillis() - dueDate.getTime()) / (1000 * 60 * 60 * 24);
-        return daysOverdue * 0.50; // $0.50 per day overdue
-    }
 
     private String getCurrentExtraParam(LibraryItem item) {
         if (item instanceof EBook) return ((EBook) item).getFileFormat();
