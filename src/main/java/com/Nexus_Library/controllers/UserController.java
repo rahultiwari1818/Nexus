@@ -2,7 +2,9 @@ package com.Nexus_Library.controllers;
 
 import com.Nexus_Library.dao.UserDAO;
 import com.Nexus_Library.model.User;
+import com.Nexus_Library.pattern.behavioral.*;
 import com.Nexus_Library.pattern.creational.UserFactory;
+import com.Nexus_Library.utils.ValidationUtils;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -26,32 +28,32 @@ public class UserController {
 
         System.out.print("First Name: ");
         String firstName = scanner.nextLine().trim();
-        if (!isValidName(firstName)) {
+        if (!ValidationUtils.isValidName(firstName)) {
             System.out.println("❌ First Name must contain only letters and spaces, and cannot be empty.");
             return false;
         }
 
         System.out.print("Last Name: ");
         String lastName = scanner.nextLine().trim();
-        if (!isValidName(lastName)) {
+        if (!ValidationUtils.isValidName(lastName)) {
             System.out.println("❌ Last Name must contain only letters and spaces, and cannot be empty.");
             return false;
         }
 
         System.out.print("Email: ");
         String email = scanner.nextLine().trim();
-        if (!isValidEmail(email)) {
+        if (!ValidationUtils.isValidEmail(email)) {
             System.out.println("❌ Invalid email format (e.g., must contain @ and .).");
             return false;
         }
-        if (isEmailExists(email)) {
+        if (ValidationUtils.isEmailExists(userDAO,email)) {
             System.out.println("❌ Email already registered.");
             return false;
         }
 
         System.out.print("Password: ");
         String password = scanner.nextLine().trim();
-        if (!isValidPassword(password)) {
+        if (!ValidationUtils.isValidPassword(password)) {
             System.out.println("❌ Password must be at least 6 characters long and include at least one letter and one number.");
             return false;
         }
@@ -91,7 +93,7 @@ public class UserController {
             System.out.println("❌ Email cannot be empty.");
             return null;
         }
-        if (!isValidEmail(email)) {
+        if (!ValidationUtils.isValidEmail(email)) {
             System.out.println("❌ Invalid email format (e.g., must contain @ and .).");
             return null;
         }
@@ -123,14 +125,44 @@ public class UserController {
     }
 
     public void getUsers() {
-        System.out.println("Enter Search Query : ");
-        String query = scanner.nextLine();
+        System.out.println("Choose search type:");
+        System.out.println("1. Search by Name");
+        System.out.println("2. Search by Email");
+        System.out.println("3. Search by Role");
+
+        String input = scanner.nextLine().trim();
+        SearchStrategy<User> strategy = null;
+
+        switch (input) {
+            case "1":
+                strategy = new NameSearch();
+                break;
+            case "2":
+                strategy = new EmailSearch();
+                break;
+            case "3":
+                strategy = new RoleSearch();
+                break;
+            default:
+                System.out.println("❌ Invalid choice.");
+                return;
+        }
+
+        System.out.print("Enter Search Query: ");
+        String query = scanner.nextLine().trim();
+
         try {
-            List<User> users = userDAO.getAllUsers(query);
+            SearchContext<User> context = new SearchContext<>();
+            context.setStrategy(strategy);
+            List<User> users = context.executeSearch(query);
+
+            if (users == null || users.isEmpty()) {
+                System.out.println("⚠️ No users found.");
+                return;
+            }
 
             System.out.printf("%-5s %-15s %-15s %-30s %-20s %-20s%n",
                     "ID", "First Name", "Last Name", "Email", "Role", "Registered");
-
             System.out.println("-----------------------------------------------------------------------------------------------------------------------------");
 
             for (User usr : users) {
@@ -140,50 +172,59 @@ public class UserController {
                         usr.getLastName(),
                         usr.getEmail(),
                         usr.getRole(),
-                        usr.getRegistrationDate().toString());
+                        usr.getRegistrationDate() != null ? usr.getRegistrationDate().toString() : "N/A");
             }
 
         } catch (Exception e) {
-            System.out.println("❌ Error during login: " + e.getMessage());
+            System.out.println("❌ Error during search: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    public User getLoggedInUser() {
-        return loggedInUser;
+    public User updateProfile(User user) {
+        System.out.println("=== Update Profile ===");
+
+        System.out.print("First Name (" + user.getFirstName() + "): ");
+        String firstName = scanner.nextLine().trim();
+        if (!firstName.isEmpty()) user.setFirstName(firstName);
+
+        System.out.print("Last Name (" + user.getLastName() + "): ");
+        String lastName = scanner.nextLine().trim();
+        if (!lastName.isEmpty()) user.setLastName(lastName);
+
+        System.out.print("Email (" + user.getEmail() + "): ");
+        String email = scanner.nextLine().trim();
+        if (!email.isEmpty()) user.setEmail(email);
+
+        System.out.print("Password (hidden): ");
+        String password = scanner.nextLine().trim();
+        if (!password.isEmpty()) user.setPassword(password);
+
+        try {
+
+            User updatedUser = userDAO.updateProfile(user);
+            if (updatedUser != null) {
+                System.out.println("✅ Profile updated successfully!");
+            } else {
+                System.out.println("❌ Failed to update profile.");
+            }
+            return updatedUser;
+        } catch (Exception e) {
+            System.out.println("❌ Error during search: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+
     }
 
-    public void setLoggedInUserToNull() {
-        loggedInUser = null;
-    }
+
+
+
+
 
     public void close() {
         scanner.close();
     }
 
-    // Validation methods
-    private boolean isValidName(String name) {
-        return name != null && !name.isEmpty() && name.matches("[a-zA-Z\\s]+");
-    }
 
-    private boolean isValidEmail(String email) {
-        String emailRegex = "^[A-Za-z0-9+_.-]+@(.+)$";
-        Pattern pattern = Pattern.compile(emailRegex);
-        return email != null && pattern.matcher(email).matches();
-    }
-
-    private boolean isValidPassword(String password) {
-        if (password == null || password.length() < 6) return false;
-        boolean hasLetter = password.matches(".*[a-zA-Z].*");
-        boolean hasNumber = password.matches(".*[0-9].*");
-        return hasLetter && hasNumber;
-    }
-
-    private boolean isEmailExists(String email) {
-        try {
-            return userDAO.loginUser(email, "") != null;
-        } catch (Exception e) {
-            System.out.println("❌ Error checking email existence: " + e.getMessage());
-            return false;
-        }
-    }
 }

@@ -91,54 +91,97 @@ public class LibraryItemDAO {
         return itemList;
     }
 
-    public boolean borrowBook(User loggedInUser, int itemId, LibraryItem item) throws SQLException {
-        try {
 
-            String query = "INSERT INTO transactions (user_id, item_id, transaction_type, due_date, status) VALUES (?, ?, ?, ?, ?)";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, loggedInUser.getUserId());
-                stmt.setInt(2, itemId);
-                stmt.setString(3, "Borrow");
-                stmt.setTimestamp(4, new Timestamp(System.currentTimeMillis() + (item.getMaxBorrowDays() * 24 * 60 * 60 * 1000L)));
-                stmt.setString(5, "Active");
-                int rowsAffected = stmt.executeUpdate();
-                if (rowsAffected > 0 && this.updateAvailability(itemId, false)) {
-                    System.out.println("✅ Book borrowed successfully! Due date: " + new Timestamp(System.currentTimeMillis() + (item.getMaxBorrowDays() * 24 * 60 * 60 * 1000L)));
-                    return true;
+    // search methods -------------------------------------------------------------------------
+
+    public List<LibraryItem> searchByISBN(String isbn) throws SQLException {
+        List<LibraryItem> itemList = new ArrayList<>();
+        String query = "SELECT * FROM library_items WHERE isbn ILIKE ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, "%" + isbn + "%");
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    itemList.add(LibraryItemFactory.createItem(
+                            rs.getString("type"),
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getString("author"),
+                            rs.getString("isbn"),
+                            rs.getBoolean("is_available"),
+                            rs.getTimestamp("added_date"),
+                            rs.getString("extra_param")
+                    ));
                 }
             }
-        } catch (Exception e) {
-            System.out.println("❌ Error borrowing book: " + e.getMessage());
         }
-        return false;
+
+        return itemList;
     }
 
-    public boolean returnBook(User loggedInUser, int itemId, LibraryItem item) throws SQLException {
 
-        try {
-            String query = "UPDATE transactions SET return_date = ?, status = ? WHERE user_id = ? AND item_id = ? AND status = 'Active'";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-                stmt.setString(2, "Completed");
-                stmt.setInt(3, loggedInUser.getUserId());
-                stmt.setInt(4, itemId);
-                int rowsAffected = stmt.executeUpdate();
-                if (rowsAffected > 0 && this.updateAvailability(itemId, true)) {
-                    System.out.println("✅ Book returned successfully!");
+    public List<LibraryItem> searchByAuthor(String author) throws SQLException {
+        List<LibraryItem> itemList = new ArrayList<>();
+        String query = "SELECT * FROM library_items WHERE author ILIKE ?";
 
-                    checkAndApplyFine(loggedInUser, itemId, item); // Check for overdue and apply fine if needed
-                    return true;
-                } else {
-                    System.out.println("❌ No active borrowing found for this item.");
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, "%" + author + "%");
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    itemList.add(LibraryItemFactory.createItem(
+                            rs.getString("type"),
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getString("author"),
+                            rs.getString("isbn"),
+                            rs.getBoolean("is_available"),
+                            rs.getTimestamp("added_date"),
+                            rs.getString("extra_param")
+                    ));
                 }
             }
-        } catch (Exception e) {
-            System.out.println("❌ Error returning book: " + e.getMessage());
         }
-        return false;
+
+        return itemList;
     }
+
+
+    public List<LibraryItem> searchByTitle(String title) throws SQLException {
+        List<LibraryItem> itemList = new ArrayList<>();
+        String query = "SELECT * FROM library_items WHERE title ILIKE ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, "%" + title + "%");
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    itemList.add(LibraryItemFactory.createItem(
+                            rs.getString("type"),
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getString("author"),
+                            rs.getString("isbn"),
+                            rs.getBoolean("is_available"),
+                            rs.getTimestamp("added_date"),
+                            rs.getString("extra_param")
+                    ));
+                }
+            }
+        }
+
+        return itemList;
+    }
+
+//    ----------------------------------------------------------------------------------------------------
+
 
     public LibraryItem getItemById(int itemId) {
         try {
@@ -167,25 +210,6 @@ public class LibraryItemDAO {
         return null;
     }
 
-    public boolean viewBorrowing(User loggedInUser) throws SQLException {
-        try {
-            String query = "SELECT item_id FROM transactions WHERE user_id = ? AND status = 'Active'";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, loggedInUser.getUserId());
-                ResultSet rs = stmt.executeQuery();
-                List<Integer> borrowedItems = new ArrayList<>();
-                while (rs.next()) {
-                    borrowedItems.add(rs.getInt("item_id"));
-                }
-                System.out.println("Current Borrowings (" + borrowedItems.size() + "): " + borrowedItems);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw e;
-        }
-        return false;
-    }
 
     public boolean updateLibraryItem(LibraryItem item) throws SQLException {
         String query = "UPDATE library_items SET title = ?, author = ?, isbn = ?, is_available = ?, extra_param = ? WHERE item_id = ?";
@@ -214,58 +238,5 @@ public class LibraryItemDAO {
         return null;
     }
 
-    private double calculateFine(Timestamp dueDate, User loggedInUser) {
-        FineSettingDAO settingsDAO = new FineSettingDAO();
-        try {
-            int fineRateRupees = settingsDAO.getFinePerDay(loggedInUser.getRole()); // Fetch fine rate in rupees
-            long daysOverdue = (System.currentTimeMillis() - dueDate.getTime()) / (1000 * 60 * 60 * 24);
-            return daysOverdue * fineRateRupees; // Fine amount in rupees
-        } catch (SQLException e) {
-            return 0.0;
-        }
-    }
 
-
-    private void checkAndApplyFine(User loggedInUser, int itemId, LibraryItem item) {
-        try {
-            String query = "SELECT transaction_id, due_date FROM transactions WHERE user_id = ? AND item_id = ? AND status = 'Active'";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, loggedInUser.getUserId());
-                stmt.setInt(2, itemId);
-                ResultSet rs = stmt.executeQuery();
-                if (rs.next()) {
-                    int transactionId = rs.getInt("transaction_id");
-                    Timestamp dueDate = rs.getTimestamp("due_date");
-                    if (System.currentTimeMillis() > dueDate.getTime()) {
-                        double fineAmount = calculateFine(dueDate,loggedInUser);
-                        // Create a new Fine object
-                        Fine fine = new Fine(
-                                0, // fine_id will be set by the database
-                                transactionId,
-                                loggedInUser.getUserId(),
-                                fineAmount,
-                                new Timestamp(System.currentTimeMillis()),
-                                "Pending",
-                                null, // payment_date
-                                null, // waived_by
-                                null  // waived_reason
-                        );
-                        // Use FineDAO to insert the fine
-                        FineDAO fineDAO = new FineDAO();
-                        fineDAO.createFine(fine);
-                        System.out.println("⚠️ Overdue! Fine of ₹" + fineAmount + " applied.");
-                        // Update transaction status to Overdue
-                        String updateQuery = "UPDATE transactions SET status = 'Overdue' WHERE transaction_id = ?";
-                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
-                            updateStmt.setInt(1, transactionId);
-                            updateStmt.executeUpdate();
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("❌ Error checking fine: " + e.getMessage());
-        }
-    }
 }

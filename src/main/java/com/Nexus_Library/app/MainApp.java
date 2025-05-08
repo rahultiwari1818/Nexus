@@ -1,68 +1,58 @@
 package com.Nexus_Library.app;
 
-import com.Nexus_Library.controllers.LibraryController;
-import com.Nexus_Library.controllers.LibraryItemController;
-import com.Nexus_Library.controllers.UserController;
 import com.Nexus_Library.model.User;
+import com.Nexus_Library.pattern.structural.LibraryFacade;
 
 import java.util.Scanner;
 
 public class MainApp {
     public static void main(String[] args) {
-        UserController userController = new UserController();
-        LibraryItemController libraryItemController = new LibraryItemController();
-        LibraryController libraryController = new LibraryController();
         Scanner scanner = new Scanner(System.in);
+        LibraryFacade libraryFacade = new LibraryFacade();
+        User loggedInUser = null;
 
         while (true) {
-            User loggedInUser = userController.getLoggedInUser();
-
             if (loggedInUser == null) {
-                // Show login/registration menu if not logged in
                 System.out.println("\n===== Welcome to Nexus Library =====");
-                System.out.println("1. Register : ");
-                System.out.println("2. Login : ");
-                System.out.println("3. Search Book : ");
-                System.out.println("4. Exit : ");
-                System.out.print("Enter your choice (1-3): ");
+                System.out.println("1. Register");
+                System.out.println("2. Login");
+                System.out.println("3. Search Book");
+                System.out.println("4. Exit");
+                System.out.print("Enter your choice (1-4): ");
 
                 int choice;
                 try {
-                    choice = scanner.nextInt();
-                    scanner.nextLine(); // Consume newline
+                    choice = Integer.parseInt(scanner.nextLine());
                 } catch (Exception e) {
-                    System.out.println("❌ Invalid input. Please enter a number (1-3).");
-                    scanner.nextLine(); // Clear invalid input
+                    System.out.println("❌ Invalid input. Please enter a number (1-4).");
                     continue;
                 }
 
                 switch (choice) {
                     case 1:
-                        userController.register();
+                        libraryFacade.registerUser();
                         break;
                     case 2:
-                        User newUser = userController.login();
-                        if (newUser != null) {
-                            libraryItemController.changeLoggedInUser(newUser);
-                            libraryController.setLoggedInUser(newUser);
-                            System.out.println("✅ You are now logged in as " + newUser.getFirstName() + " (" + newUser.getRole() + ").");
+                        loggedInUser = libraryFacade.loginUser();
+                        if (loggedInUser != null) {
+                            System.out.println("✅ Logged in as " + loggedInUser.getFirstName() + " (" + loggedInUser.getRole() + ")");
                         }
                         break;
                     case 3:
-
+                        libraryFacade.searchBook();
                         break;
                     case 4:
                         System.out.println("👋 Exiting... Thank you for using Nexus Library!");
-                        userController.close();
-                        libraryItemController.close();
+                        libraryFacade.close();
                         scanner.close();
                         System.exit(0);
+                        break;
                     default:
-                        System.out.println("⚠️ Invalid choice. Please enter a number between 1 and 3.");
+                        System.out.println("⚠️ Invalid choice. Please enter a number between 1 and 4.");
                 }
             }
-            else if (loggedInUser.getRole().equals("Admin")) {
-                // Show Admin menu
+
+            else if ("Admin".equalsIgnoreCase(loggedInUser.getRole())) {
                 System.out.println("\n=== Admin Menu ===");
                 System.out.println("1. Add Library Item");
                 System.out.println("2. Delete Book");
@@ -72,47 +62,44 @@ public class MainApp {
                 System.out.println("6. View Users");
                 System.out.println("7. Logout");
 
-                System.out.print("Enter your choice (1-6): ");
-
+                System.out.print("Enter your choice (1-7): ");
                 int choice;
                 try {
-                    choice = scanner.nextInt();
-                    scanner.nextLine(); // Consume newline
+                    choice = Integer.parseInt(scanner.nextLine());
                 } catch (Exception e) {
-                    System.out.println("❌ Invalid input. Please enter a number between 1 and 6.");
-                    scanner.nextLine(); // Clear invalid input
-                    return; // Exit the method or loop iteration
+                    System.out.println("❌ Invalid input. Please enter a number between 1 and 7.");
+                    continue;
                 }
 
                 switch (choice) {
                     case 1:
-                        libraryItemController.addItem();
+                        libraryFacade.addLibraryItem(loggedInUser);
                         break;
                     case 2:
-                        libraryController.deleteBook();
+                        libraryFacade.deleteBook(loggedInUser);
                         break;
                     case 3:
-                        libraryController.updateBookInfo();
+                        libraryFacade.updateBook(loggedInUser);
                         break;
                     case 4:
-                        libraryController.takeFine();
+                        libraryFacade.takeFine(loggedInUser);
                         break;
                     case 5:
-                        libraryController.updateProfile();
+                        loggedInUser = libraryFacade.updateProfile(loggedInUser);
                         break;
-                    case 6 :
-                        userController.getUsers();
+                    case 6:
+                        libraryFacade.viewUsers();
                         break;
                     case 7:
-                        userController.setLoggedInUserToNull();
                         loggedInUser = null;
                         System.out.println("✅ Logged out successfully!");
                         break;
                     default:
-                        System.out.println("⚠️ Invalid choice. Please enter a number between 1 and 6.");
+                        System.out.println("⚠️ Invalid choice. Please enter a number between 1 and 7.");
                 }
             }
-            else{
+
+            else {
                 System.out.println("\n===== Nexus Library - Welcome, " + loggedInUser.getFirstName() + " (" + loggedInUser.getRole() + ") =====");
                 System.out.println("1. Borrow Book");
                 System.out.println("2. Return Book");
@@ -123,6 +110,44 @@ public class MainApp {
                 System.out.println("7. Update Profile");
                 System.out.println("8. Logout");
 
+                System.out.print("Enter your choice (1-8): ");
+                int choice;
+                try {
+                    choice = Integer.parseInt(scanner.nextLine());
+                } catch (Exception e) {
+                    System.out.println("❌ Invalid input. Please enter a number between 1 and 8.");
+                    continue;
+                }
+
+                switch (choice) {
+                    case 1:
+                        libraryFacade.borrowBook(loggedInUser);
+                        break;
+                    case 2:
+                        libraryFacade.returnBook(loggedInUser);
+                        break;
+                    case 3:
+                        libraryFacade.viewCurrentBorrowings(loggedInUser);
+                        break;
+                    case 4:
+                        libraryFacade.viewBorrowingHistory(loggedInUser);
+                        break;
+                    case 5:
+                        libraryFacade.payFine(loggedInUser);
+                        break;
+                    case 6:
+                        libraryFacade.searchBook();
+                        break;
+                    case 7:
+                        loggedInUser = libraryFacade.updateProfile(loggedInUser);
+                        break;
+                    case 8:
+                        loggedInUser = null;
+                        System.out.println("✅ Logged out successfully!");
+                        break;
+                    default:
+                        System.out.println("⚠️ Invalid choice. Please enter a number between 1 and 8.");
+                }
             }
         }
     }

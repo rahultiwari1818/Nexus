@@ -4,6 +4,7 @@ import com.Nexus_Library.config.DBConnection;
 import com.Nexus_Library.dao.LibraryItemDAO;
 import com.Nexus_Library.dao.UserDAO;
 import com.Nexus_Library.model.*;
+import com.Nexus_Library.utils.ValidationUtils;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -16,181 +17,34 @@ public class LibraryController {
     private final UserDAO userDAO;
     private final LibraryItemController itemController;
     private final Scanner scanner;
-    private User loggedInUser; // Track the logged-in user
     private LibraryItemDAO libraryItemDAO;
 
     public LibraryController() {
         this.userDAO = new UserDAO();
         this.itemController = new LibraryItemController();
         this.scanner = new Scanner(System.in);
-        this.loggedInUser = null; // Set after login
         this.libraryItemDAO = new LibraryItemDAO();
     }
 
-    public void setLoggedInUser(User user) {
-        this.loggedInUser = user;
-        this.itemController.changeLoggedInUser(user); // Sync with LibraryItemController
-    }
-
-    // Student/Faculty/Researcher Operations
-    public boolean borrowBook() {
-        if (loggedInUser == null || !isValidRole()) {
-            System.out.println("❌ Please login as Student, Faculty, or Researcher to borrow a book.");
-            return false;
-        }
-
-        System.out.print("Enter Item ID to borrow: ");
-        int itemId;
-        try {
-            itemId = Integer.parseInt(scanner.nextLine().trim());
-        } catch (Exception e) {
-            System.out.println("❌ Invalid Item ID.");
-            return false;
-        }
-
-        LibraryItem item = libraryItemDAO.getItemById(itemId);
-        if (item == null) {
-            System.out.println("❌ Item not found.");
-            return false;
-        }
-        if (!item.isAvailable()) {
-            System.out.println("❌ Item is not available.");
-            return false;
-        }
 
 
-        try {
-            return libraryItemDAO.borrowBook(loggedInUser, itemId, item);
-        } catch (SQLException e) {
-            System.out.println("❌ Error borrowing book: " + e.getMessage());
-        }
-        return false;
 
-    }
-
-    public boolean returnBook() {
-        if (loggedInUser == null || !isValidRole()) {
-            System.out.println("❌ Please login as Student, Faculty, or Researcher to return a book.");
-            return false;
-        }
-
-        System.out.print("Enter Item ID to return: ");
-        int itemId;
-        try {
-            itemId = Integer.parseInt(scanner.nextLine().trim());
-        } catch (Exception e) {
-            System.out.println("❌ Invalid Item ID.");
-            return false;
-        }
-
-        LibraryItem item = libraryItemDAO.getItemById(itemId);;
-
-        try {
-            return libraryItemDAO.borrowBook(loggedInUser, itemId, item);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-
-    }
-
-    public void viewCurrentBorrowings() {
-        if (loggedInUser == null || !isValidRole()) {
-            System.out.println("❌ Please login as Student, Faculty, or Researcher to view borrowings.");
-            return;
-        }
-
-        try {
-
-        } catch (Exception e) {
-            System.out.println("❌ Error retrieving borrowings: " + e.getMessage());
-        }
-    }
-
-    public void viewBorrowingHistory() {
-        if (loggedInUser == null || !isValidRole()) {
-            System.out.println("❌ Please login as Student, Faculty, or Researcher to view history.");
-            return;
-        }
-
-        try {
-            String query = "SELECT item_id, transaction_date, due_date, return_date, fine_amount FROM transactions WHERE user_id = ? AND status IN ('Completed', 'Overdue')";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, loggedInUser.getUserId());
-                ResultSet rs = stmt.executeQuery();
-                System.out.println("Borrowing History:");
-                while (rs.next()) {
-                    System.out.println("Item ID: " + rs.getInt("item_id") +
-                            ", Borrowed: " + rs.getTimestamp("transaction_date") +
-                            ", Due: " + rs.getTimestamp("due_date") +
-                            ", Returned: " + rs.getTimestamp("return_date") +
-                            ", Fine: $" + rs.getDouble("fine_amount"));
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("❌ Error retrieving history: " + e.getMessage());
-        }
-    }
-
-    public boolean payFine() {
-        if (loggedInUser == null || !isValidRole()) {
-            System.out.println("❌ Please login as Student, Faculty, or Researcher to pay a fine.");
-            return false;
-        }
-
-        try {
-            String query = "SELECT transaction_id, fine_amount FROM transactions WHERE user_id = ? AND status = 'Overdue' AND paid_date IS NULL";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, loggedInUser.getUserId());
-                ResultSet rs = stmt.executeQuery();
-                if (rs.next()) {
-                    int transactionId = rs.getInt("transaction_id");
-                    double fineAmount = rs.getDouble("fine_amount");
-                    System.out.println("Outstanding Fine: $" + fineAmount + " for Transaction ID: " + transactionId);
-                    System.out.print("Confirm payment (yes/no): ");
-                    String confirm = scanner.nextLine().trim().toLowerCase();
-                    if ("yes".equals(confirm)) {
-                        String updateQuery = "UPDATE transactions SET paid_date = ?, status = 'Completed' WHERE transaction_id = ?";
-                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
-                            updateStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-                            updateStmt.setInt(2, transactionId);
-                            int rowsAffected = updateStmt.executeUpdate();
-                            if (rowsAffected > 0) {
-                                System.out.println("✅ Fine of $" + fineAmount + " paid successfully!");
-                                return true;
-                            }
-                        }
-                    } else {
-                        System.out.println("❌ Payment cancelled.");
-                    }
-                } else {
-                    System.out.println("✅ No outstanding fines to pay.");
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("❌ Error paying fine: " + e.getMessage());
-        }
-        return false;
-    }
-
-    public boolean updateProfile() {
-        if (loggedInUser == null || !isValidRole()) {
+    public boolean updateProfile(User loggedInUser) {
+        if (loggedInUser == null || !ValidationUtils.isValidRole( loggedInUser)) {
             System.out.println("❌ Please login as Student, Faculty, or Researcher to update profile.");
             return false;
         }
 
         System.out.print("New First Name: ");
         String firstName = scanner.nextLine().trim();
-        if (!itemController.isValidName(firstName)) { // Use LibraryItemController's validation
+        if (!ValidationUtils.isValidName(firstName)) { // Use LibraryItemController's validation
             System.out.println("❌ First Name must contain only letters and spaces, and cannot be empty.");
             return false;
         }
 
         System.out.print("New Last Name: ");
         String lastName = scanner.nextLine().trim();
-        if (!itemController.isValidName(lastName)) {
+        if (!ValidationUtils.isValidName(lastName)) {
             System.out.println("❌ Last Name must contain only letters and spaces, and cannot be empty.");
             return false;
         }
@@ -241,7 +95,7 @@ public class LibraryController {
     }
 
     // Admin Operations
-    public boolean deleteBook() {
+    public boolean deleteBook(User loggedInUser) {
         if (loggedInUser == null || !"Admin".equals(loggedInUser.getRole())) {
             System.out.println("❌ Only Admin can delete a book.");
             return false;
@@ -275,7 +129,7 @@ public class LibraryController {
         return false;
     }
 
-    public boolean updateBookInfo() {
+    public boolean updateBookInfo(User loggedInUser) {
         if (loggedInUser == null || !"Admin".equals(loggedInUser.getRole())) {
             System.out.println("❌ Only Admin can update book info.");
             return false;
@@ -302,7 +156,7 @@ public class LibraryController {
 
         System.out.print("New Author: ");
         String author = scanner.nextLine().trim();
-        if (!itemController.isValidName(author) && !author.isEmpty()) {
+        if (!ValidationUtils.isValidName(author) && !author.isEmpty()) {
             System.out.println("❌ Author must contain only letters and spaces.");
             return false;
         }
@@ -310,7 +164,7 @@ public class LibraryController {
 
         System.out.print("New ISBN (13 digits, leave empty to keep current): ");
         String isbn = scanner.nextLine().trim();
-        if (!isbn.isEmpty() && !itemController.isValidIsbn(isbn)) {
+        if (!isbn.isEmpty() && !ValidationUtils.isValidIsbn(isbn)) {
             System.out.println("❌ ISBN must be exactly 13 digits.");
             return false;
         }
@@ -361,7 +215,10 @@ public class LibraryController {
         return false;
     }
 
-    public boolean takeFine() {
+
+    // ----- changed
+
+    public boolean takeFine(User loggedInUser) {
         if (loggedInUser == null || !"Admin".equals(loggedInUser.getRole())) {
             System.out.println("❌ Only Admin can take a fine.");
             return false;
@@ -414,11 +271,10 @@ public class LibraryController {
 
 
     // Helper methods
-    private boolean isValidRole() {
-        return loggedInUser != null && Arrays.asList("Student", "Faculty", "Researcher").contains(loggedInUser.getRole());
-    }
 
 
+
+    //untouched
 
     private String getCurrentExtraParam(LibraryItem item) {
         if (item instanceof EBook) return ((EBook) item).getFileFormat();

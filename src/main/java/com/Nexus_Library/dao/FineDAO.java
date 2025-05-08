@@ -2,6 +2,8 @@ package com.Nexus_Library.dao;
 
 import com.Nexus_Library.config.DBConnection;
 import com.Nexus_Library.model.Fine;
+import com.Nexus_Library.model.LibraryItem;
+import com.Nexus_Library.model.User;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -14,7 +16,7 @@ import java.util.List;
 public class FineDAO {
 
     // Create a new fine record
-    public boolean createFine(Fine fine) throws SQLException {
+    private boolean createFine(Fine fine) throws SQLException {
         String query = "INSERT INTO fines (transaction_id, user_id, fine_amount, fine_calculated_date, payment_status) " +
                 "VALUES (?, ?, ?, ?, ?) RETURNING fine_id";
         try (Connection conn = DBConnection.getConnection();
@@ -109,6 +111,100 @@ public class FineDAO {
 
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
+        }
+    }
+
+
+
+    public boolean collectFine(User loggedInUser,String confirm) throws SQLException{
+        String query = "SELECT transaction_id, fine_amount FROM transactions WHERE user_id = ? AND status = 'Overdue' AND paid_date IS NULL";
+        try (Connection conn = DBConnection.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, loggedInUser.getUserId());
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                int transactionId = rs.getInt("transaction_id");
+                double fineAmount = rs.getDouble("fine_amount");
+//                System.out.println("Outstanding Fine: $" + fineAmount + " for Transaction ID: " + transactionId);
+//                System.out.print("Confirm payment (yes/no): ");
+//                String confirm = scanner.nextLine().trim().toLowerCase();
+                if ("yes".equals(confirm)) {
+                    String updateQuery = "UPDATE transactions SET paid_date = ?, status = 'Completed' WHERE transaction_id = ?";
+                    try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                        updateStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+                        updateStmt.setInt(2, transactionId);
+                        int rowsAffected = updateStmt.executeUpdate();
+                        if (rowsAffected > 0) {
+                            System.out.println("✅ Fine of $" + fineAmount + " paid successfully!");
+                            return true;
+                        }
+                    }
+                } else {
+                    System.out.println("❌ Payment cancelled.");
+                    return false;
+                }
+            } else {
+                System.out.println("✅ No outstanding fines to pay.");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private double calculateFine(Timestamp dueDate, User loggedInUser) {
+        FineSettingDAO settingsDAO = new FineSettingDAO();
+        try {
+            int fineRateRupees = settingsDAO.getFinePerDay(loggedInUser.getRole()); // Fetch fine rate in rupees
+            long daysOverdue = (System.currentTimeMillis() - dueDate.getTime()) / (1000 * 60 * 60 * 24);
+            return daysOverdue * fineRateRupees; // Fine amount in rupees
+        } catch (SQLException e) {
+            return 0.0;
+        }
+    }
+
+
+    public void checkAndApplyFine(User loggedInUser, int itemId, LibraryItem item) {
+        try {
+            String query = "SELECT transaction_id, due_date FROM transactions WHERE user_id = ? AND item_id = ? AND status = 'Active'";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setInt(1, loggedInUser.getUserId());
+                stmt.setInt(2, itemId);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    int transactionId = rs.getInt("transaction_id");
+                    Timestamp dueDate = rs.getTimestamp("due_date");
+                    if (System.currentTimeMillis() > dueDate.getTime()) {
+                        double fineAmount = calculateFine(dueDate,loggedInUser);
+                        // Create a new Fine object
+                        Fine fine = new Fine(
+                                0, // fine_id will be set by the database
+                                transactionId,
+                                loggedInUser.getUserId(),
+                                fineAmount,
+                                new Timestamp(System.currentTimeMillis()),
+                                "Pending",
+                                null, // payment_date
+                                null, // waived_by
+                                null  // waived_reason
+                        );
+                        // Use FineDAO to insert the fine
+                        FineDAO fineDAO = new FineDAO();
+                        if(!fineDAO.createFine(fine)){
+                            throw new SQLException();
+                        }
+
+                        System.out.println("⚠️ Overdue! Fine of ₹" + fineAmount + " applied.");
+                        // Update transaction status to Overdue
+                        String updateQuery = "UPDATE transactions SET status = 'Overdue' WHERE transaction_id = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                            updateStmt.setInt(1, transactionId);
+                            updateStmt.executeUpdate();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Error checking fine: " + e.getMessage());
         }
     }
 }

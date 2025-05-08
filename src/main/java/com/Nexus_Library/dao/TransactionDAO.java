@@ -1,7 +1,9 @@
 package com.Nexus_Library.dao;
 
 import com.Nexus_Library.config.DBConnection;
+import com.Nexus_Library.model.LibraryItem;
 import com.Nexus_Library.model.Transaction;
+import com.Nexus_Library.model.User;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,27 +15,84 @@ import java.util.List;
 
 public class TransactionDAO {
 
-    // Create a new transaction record
-    public boolean createTransaction(Transaction transaction) throws SQLException {
-        String query = "INSERT INTO transactions (user_id, item_id, transaction_type, transaction_date, due_date, status) " +
-                "VALUES (?, ?, ?, ?, ?, ?) RETURNING transaction_id";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, transaction.getUserId());
-            stmt.setInt(2, transaction.getItemId());
-            stmt.setString(3, transaction.getTransactionType());
-            stmt.setTimestamp(4, transaction.getTransactionDate());
-            stmt.setTimestamp(5, transaction.getDueDate());
-            stmt.setString(6, transaction.getStatus());
+     LibraryItemDAO libraryItemDAO;
+     FineDAO fineDAO;
+     public TransactionDAO(){
+         libraryItemDAO = new LibraryItemDAO();
+         fineDAO = new FineDAO();
+     }
 
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                transaction.setTransactionId(rs.getInt("transaction_id"));
-                return true;
+    public boolean borrowBook(User loggedInUser, int itemId, LibraryItem item) throws SQLException {
+        try {
+
+            String query = "INSERT INTO transactions (user_id, item_id, transaction_type, due_date, status) VALUES (?, ?, ?, ?, ?)";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setInt(1, loggedInUser.getUserId());
+                stmt.setInt(2, itemId);
+                stmt.setString(3, "Borrow");
+                stmt.setTimestamp(4, new Timestamp(System.currentTimeMillis() + (item.getMaxBorrowDays() * 24 * 60 * 60 * 1000L)));
+                stmt.setString(5, "Active");
+                int rowsAffected = stmt.executeUpdate();
+                if (rowsAffected > 0 && libraryItemDAO.updateAvailability(itemId, false)) {
+                    System.out.println("✅ Book borrowed successfully! Due date: " + new Timestamp(System.currentTimeMillis() + (item.getMaxBorrowDays() * 24 * 60 * 60 * 1000L)));
+                    return true;
+                }
             }
-            return false;
+        } catch (Exception e) {
+            System.out.println("❌ Error borrowing book: " + e.getMessage());
         }
+        return false;
     }
+
+    public boolean returnBook(User loggedInUser, int itemId, LibraryItem item) throws SQLException {
+
+        try {
+            String query = "UPDATE transactions SET return_date = ?, status = ? WHERE user_id = ? AND item_id = ? AND status = 'Active'";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+                stmt.setString(2, "Completed");
+                stmt.setInt(3, loggedInUser.getUserId());
+                stmt.setInt(4, itemId);
+                int rowsAffected = stmt.executeUpdate();
+                if (rowsAffected > 0 && libraryItemDAO.updateAvailability(itemId, true)) {
+                    System.out.println("✅ Book returned successfully!");
+
+                    fineDAO.checkAndApplyFine(loggedInUser, itemId, item); // Check for overdue and apply fine if needed
+                    return true;
+                } else {
+                    System.out.println("❌ No active borrowing found for this item.");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Error returning book: " + e.getMessage());
+        }
+        return false;
+    }
+
+
+
+    public boolean getAllActiveTransactionsByUser(User loggedInUser) throws SQLException {
+        try {
+            String query = "SELECT item_id FROM transactions WHERE user_id = ? AND status = 'Active'";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setInt(1, loggedInUser.getUserId());
+                ResultSet rs = stmt.executeQuery();
+                List<Integer> borrowedItems = new ArrayList<>();
+                while (rs.next()) {
+                    borrowedItems.add(rs.getInt("item_id"));
+                }
+                System.out.println("Current Borrowings (" + borrowedItems.size() + "): " + borrowedItems);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw e;
+        }
+        return false;
+    }
+
 
     // Retrieve a transaction by transaction_id
     public Transaction getTransactionById(int transactionId) throws SQLException {
@@ -59,7 +118,7 @@ public class TransactionDAO {
     }
 
     // Retrieve all transactions for a user
-    public List<Transaction> getTransactionsByUser(int userId) throws SQLException {
+    public List<Transaction> getAllTransactionsByUser(int userId) throws SQLException {
         List<Transaction> transactions = new ArrayList<>();
         String query = "SELECT * FROM transactions WHERE user_id = ?";
         try (Connection conn = DBConnection.getConnection();

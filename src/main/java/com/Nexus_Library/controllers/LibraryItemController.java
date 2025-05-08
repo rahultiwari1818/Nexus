@@ -4,7 +4,12 @@ import com.Nexus_Library.config.DBConnection;
 import com.Nexus_Library.dao.LibraryItemDAO;
 import com.Nexus_Library.model.LibraryItem;
 import com.Nexus_Library.model.User;
+import com.Nexus_Library.pattern.behavioral.AuthorSearch;
+import com.Nexus_Library.pattern.behavioral.IsbnSearch;
+import com.Nexus_Library.pattern.behavioral.SearchContext;
+import com.Nexus_Library.pattern.behavioral.TitleSearch;
 import com.Nexus_Library.pattern.creational.LibraryItemFactory;
+import com.Nexus_Library.utils.ValidationUtils;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -18,19 +23,14 @@ import java.util.regex.Pattern;
 public class LibraryItemController {
     private final LibraryItemDAO itemDAO;
     private final Scanner scanner;
-    private User loggedInUser;
 
     public LibraryItemController() {
         this.itemDAO = new LibraryItemDAO();
         this.scanner = new Scanner(System.in);
-        this.loggedInUser = null;
     }
 
-    public void changeLoggedInUser(User user) {
-        this.loggedInUser = user;
-    }
 
-    public boolean addItem() {
+    public boolean addItem(User loggedInUser) {
         if (loggedInUser == null || !"Admin".equals(loggedInUser.getRole())) {
             System.out.println("❌ Only Admin can add a library item.");
             return false;
@@ -55,14 +55,14 @@ public class LibraryItemController {
 
         System.out.print("Author: ");
         String author = scanner.nextLine().trim();
-        if (!isValidName(author)) {
+        if (!ValidationUtils.isValidName(author)) {
             System.out.println("❌ Author must contain only letters and spaces, and cannot be empty.");
             return false;
         }
 
         System.out.print("ISBN (13 digits): ");
         String isbn = scanner.nextLine().trim();
-        if (!isValidIsbn(isbn)) {
+        if (!ValidationUtils.isValidIsbn(isbn)) {
             System.out.println("❌ ISBN must be exactly 13 digits.");
             return false;
         }
@@ -113,39 +113,61 @@ public class LibraryItemController {
     }
 
 
-
-
-
     public void searchLibraryItem() {
+        System.out.println("Select search type:");
+        System.out.println("1. Title");
+        System.out.println("2. Author");
+        System.out.println("3. ISBN");
+
+        int choice;
+        try {
+            choice = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("❌ Invalid choice.");
+            return;
+        }
+
         System.out.print("Enter Search Query: ");
         String query = scanner.nextLine();
 
+        SearchContext<LibraryItem> context = new SearchContext<>();
+
+        switch (choice) {
+            case 1:
+                context.setStrategy(new TitleSearch());
+                break;
+            case 2:
+                context.setStrategy(new AuthorSearch());
+                break;
+            case 3:
+                context.setStrategy(new IsbnSearch());
+                break;
+            default:
+                System.out.println("❌ Invalid option.");
+                return;
+        }
+
         try {
-            List<LibraryItem> items = itemDAO.searchLibraryItems(query);
+            List<LibraryItem> items = context.executeSearch(query);
 
             if (items == null || items.isEmpty()) {
                 System.out.println("⚠️ No items found matching your query.");
                 return;
             }
 
-            // Print header
-            System.out.printf("%-5s %-30s %-20s %-15s %-12s %-20s %-15s %-20s%n",
+            System.out.printf("%-5s %-30s %-20s %-15s %-12s %-20s %-15s%n",
                     "ID", "Title", "Author", "ISBN", "Available", "Added Date", "Type");
+            System.out.println("--------------------------------------------------------------------------------------------------------");
 
-            // Print separator
-            System.out.println("-------------------------------------------------------------------------------------------------------------");
-
-            // Print each item
             for (LibraryItem item : items) {
-                System.out.printf("%-5d %-30s %-20s %-15s %-12s %-20s %-15s %-20s%n",
+                System.out.printf("%-5d %-30s %-20s %-15s %-12s %-20s %-15s%n",
                         item.getItemId(),
                         item.getTitle(),
                         item.getAuthor() != null ? item.getAuthor() : "N/A",
                         item.getIsbn() != null ? item.getIsbn() : "N/A",
                         item.isAvailable() ? "Yes" : "No",
                         item.getAddedDate().toString(),
-                        item.getItemType()
-                );
+                        item.getItemType());
             }
 
         } catch (Exception e) {
@@ -155,14 +177,9 @@ public class LibraryItemController {
     }
 
 
-    // Validation methods
-    public boolean isValidName(String name) {
-        return name != null && !name.isEmpty() && name.matches("[a-zA-Z\\s]+");
-    }
 
-    public boolean isValidIsbn(String isbn) {
-        return isbn != null && isbn.matches("\\d{13}");
-    }
+
+
 
     public void close() {
         scanner.close();
