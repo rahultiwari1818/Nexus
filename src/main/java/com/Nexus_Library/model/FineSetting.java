@@ -5,12 +5,12 @@ public class FineSetting {
     private int id;
     private String userType;
     private int finePerDay;
-    private String activeStatus;
+    private boolean activeStatus;
 
     public FineSetting() {
     }
 
-    public FineSetting(int id, String userType, int finePerDay, String activeStatus) {
+    public FineSetting(int id, String userType, int finePerDay, boolean activeStatus) {
         this.id = id;
         this.userType = userType;
         this.finePerDay = finePerDay;
@@ -43,11 +43,11 @@ public class FineSetting {
         this.finePerDay = finePerDay;
     }
 
-    public String getActiveStatus() {
+    public boolean getActiveStatus() {
         return activeStatus;
     }
 
-    public void setActiveStatus(String activeStatus) {
+    public void setActiveStatus(boolean activeStatus) {
         this.activeStatus = activeStatus;
     }
 

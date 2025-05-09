@@ -6,16 +6,18 @@ import com.Nexus_Library.model.User;
 public class LibraryFacade {
     private final UserController userController;
     private final LibraryItemController libraryItemController;
-    private final LibraryController libraryController;
     private final TransactionController transactionController;
     private final FineController fineController;
+    private final FineSettingController fineSettingController;
+    private final BorrowingSettingController borrowingSettingController;
 
     public LibraryFacade() {
         this.userController = new UserController();
         this.libraryItemController = new LibraryItemController();
-        this.libraryController = new LibraryController();
         this.transactionController = new TransactionController();
         this.fineController = new FineController();
+        this.fineSettingController = new FineSettingController();
+        this.borrowingSettingController = new BorrowingSettingController();
     }
 
     // User-related operations
@@ -28,7 +30,7 @@ public class LibraryFacade {
     }
 
     public User updateProfile(User user) {
-        libraryController.updateProfile(user);
+        return userController.updateProfile(user);
     }
 
     public void logout() {
@@ -36,33 +38,87 @@ public class LibraryFacade {
         libraryItemController.close();
     }
 
-    public void viewUsers() {
-        userController.getUsers();
+    public void viewUsers(User loggedInUser) {
+        userController.getAllUsers(loggedInUser);
     }
 
-    // Admin-only operations
+    public void searchBook() {
+        libraryItemController.searchLibraryItem();
+    }
+
+    public void searchUsers(User loggedInUser) {
+        userController.searchUsers(loggedInUser);
+    }
+
+    // Admin-only: Library Item Management
     public void addLibraryItem(User admin) {
         libraryItemController.addItem(admin);
     }
 
     public void deleteBook(User admin) {
-        libraryController.deleteBook(admin);
+        libraryItemController.deleteBook(admin);
     }
 
     public void updateBook(User admin) {
-        libraryController.updateBookInfo(admin);
+        libraryItemController.updateBookInfo(admin);
     }
 
-    public void takeFine(User admin) {
-        libraryController.takeFine(admin);
+    public void viewAllLibraryItems() {
+        libraryItemController.viewAllItems();
     }
 
-    // Common to all users
-    public void searchBook() {
-        libraryItemController.searchLibraryItem();
+    // Admin-only: Fine Setting Management
+    public void addFineSetting(User admin) {
+        fineSettingController.addFineSetting(admin);
     }
 
-    // User borrowing operations
+    public void removeFineSetting(User admin) {
+        fineSettingController.deleteFineSetting(admin);
+    }
+
+    public void updateFineStatus(User admin) {
+        fineSettingController.updateFineStatus(admin);
+    }
+
+    public void updateFineAmount(User admin) {
+        fineSettingController.updateFineAmount(admin);
+    }
+
+    public void viewAllFineSettings(User admin) {
+        fineSettingController.viewAllFineSettings(admin);
+    }
+
+    // Admin-only: Borrowing Setting Management
+    public void addBorrowingSetting(User admin) {
+        borrowingSettingController.addBorrowingSetting(admin);
+    }
+
+    public void updateBorrowingLimit(User admin) {
+        borrowingSettingController.updateBorrowingLimit(admin);
+    }
+
+    public void updateBorrowingActiveStatus(User admin) {
+        borrowingSettingController.updateActiveStatus(admin);
+    }
+
+    public void deleteBorrowingSetting(User admin) {
+        borrowingSettingController.deleteBorrowingSetting(admin);
+    }
+
+    public void displayAllBorrowingSettings(User admin) {
+        borrowingSettingController.displayAllBorrowingSettings(admin);
+    }
+
+    // Admin-only: Transaction Views
+    public void viewAllTransactions(User admin) {
+        transactionController.viewAllTransactions(admin);
+    }
+
+    public void viewAllCurrentBorrowings(User admin) {
+        transactionController.viewAllActiveTransactions(admin);
+    }
+
+    // All Users: Book Borrowing Workflow
     public void borrowBook(User user) {
         transactionController.borrowBook(user);
     }
@@ -83,8 +139,8 @@ public class LibraryFacade {
         fineController.payFine(user);
     }
 
-    // Close all resources gracefully
+    // Graceful shutdown
     public void close() {
-        logout(); // reuse logout logic to close resources
+        logout(); // uses logout logic to close necessary resources
     }
 }

@@ -86,19 +86,19 @@ public class FineDAO {
         return fines;
     }
 
-    // Update fine payment status (e.g., mark as Paid)
-    public boolean updateFinePayment(int fineId, String paymentStatus, Timestamp paymentDate) throws SQLException {
-        String query = "UPDATE fines SET payment_status = ?, payment_date = ? WHERE fine_id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setString(1, paymentStatus);
-            stmt.setTimestamp(2, paymentDate);
-            stmt.setInt(3, fineId);
-
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
-        }
-    }
+//    // Update fine payment status (e.g., mark as Paid)
+//    public boolean updateFinePayment(int fineId, String paymentStatus, Timestamp paymentDate) throws SQLException {
+//        String query = "UPDATE fines SET payment_status = ?, payment_date = ? WHERE fine_id = ?";
+//        try (Connection conn = DBConnection.getConnection();
+//             PreparedStatement stmt = conn.prepareStatement(query)) {
+//            stmt.setString(1, paymentStatus);
+//            stmt.setTimestamp(2, paymentDate);
+//            stmt.setInt(3, fineId);
+//
+//            int rowsAffected = stmt.executeUpdate();
+//            return rowsAffected > 0;
+//        }
+//    }
 
     // Waive a fine (set payment_status to 'Waived', set waived_by and waived_reason)
     public boolean waiveFine(int fineId, int waivedBy, String waivedReason) throws SQLException {
@@ -116,39 +116,7 @@ public class FineDAO {
 
 
 
-    public boolean collectFine(User loggedInUser,String confirm) throws SQLException{
-        String query = "SELECT transaction_id, fine_amount FROM transactions WHERE user_id = ? AND status = 'Overdue' AND paid_date IS NULL";
-        try (Connection conn = DBConnection.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, loggedInUser.getUserId());
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                int transactionId = rs.getInt("transaction_id");
-                double fineAmount = rs.getDouble("fine_amount");
-//                System.out.println("Outstanding Fine: $" + fineAmount + " for Transaction ID: " + transactionId);
-//                System.out.print("Confirm payment (yes/no): ");
-//                String confirm = scanner.nextLine().trim().toLowerCase();
-                if ("yes".equals(confirm)) {
-                    String updateQuery = "UPDATE transactions SET paid_date = ?, status = 'Completed' WHERE transaction_id = ?";
-                    try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
-                        updateStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-                        updateStmt.setInt(2, transactionId);
-                        int rowsAffected = updateStmt.executeUpdate();
-                        if (rowsAffected > 0) {
-                            System.out.println("✅ Fine of $" + fineAmount + " paid successfully!");
-                            return true;
-                        }
-                    }
-                } else {
-                    System.out.println("❌ Payment cancelled.");
-                    return false;
-                }
-            } else {
-                System.out.println("✅ No outstanding fines to pay.");
-                return true;
-            }
-        }
-        return false;
-    }
+
 
     private double calculateFine(Timestamp dueDate, User loggedInUser) {
         FineSettingDAO settingsDAO = new FineSettingDAO();
@@ -207,4 +175,60 @@ public class FineDAO {
             System.out.println("❌ Error checking fine: " + e.getMessage());
         }
     }
+
+
+
+
+    public int getOutstandingFineAmount(int userId) throws SQLException {
+        String query = "SELECT SUM(fine_amount) AS total_fine FROM transactions WHERE user_id = ? AND fine_amount > 0 AND payment_status = 'Pending'";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, userId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("total_fine");
+                }
+            }
+        }
+
+        return 0;
+    }
+
+
+
+
+    public boolean payAllPendingFines(int userId) throws SQLException {
+        String query = "UPDATE fines SET payment_status = 'Paid', payment_date = CURRENT_TIMESTAMP " +
+                "WHERE user_id = ? AND payment_status = 'Pending'";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, userId);
+            int rows = stmt.executeUpdate();
+            return rows > 0;
+        }
+    }
+
+    public List<String> getPendingFinesDetails(int userId) throws SQLException {
+        String query = "SELECT fine_id, transaction_id, fine_amount FROM fines WHERE user_id = ? AND payment_status = 'Pending'";
+        List<String> details = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, userId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    details.add("Fine ID: " + rs.getInt("fine_id") +
+                            ", Transaction ID: " + rs.getInt("transaction_id") +
+                            ", Amount: ₹" + rs.getBigDecimal("fine_amount"));
+                }
+            }
+        }
+
+        return details;
+    }
+
 }

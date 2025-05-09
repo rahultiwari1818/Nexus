@@ -6,6 +6,7 @@ import com.Nexus_Library.pattern.behavioral.*;
 import com.Nexus_Library.pattern.creational.UserFactory;
 import com.Nexus_Library.utils.ValidationUtils;
 
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,7 +47,7 @@ public class UserController {
             System.out.println("❌ Invalid email format (e.g., must contain @ and .).");
             return false;
         }
-        if (ValidationUtils.isEmailExists(userDAO,email)) {
+        if (ValidationUtils.isEmailExists(userDAO, email)) {
             System.out.println("❌ Email already registered.");
             return false;
         }
@@ -111,8 +112,7 @@ public class UserController {
                 this.loggedInUser = loggedInUser; // Set the logged-in user
                 System.out.println("✅ Login successful! Welcome, " + loggedInUser.getFirstName() +
                         " (" + loggedInUser.getRole() + ")!");
-                System.out.println("Borrow Limit: " + loggedInUser.getBorrowLimit() +
-                        ", Research Access: " + loggedInUser.canAccessResearchPapers());
+                System.out.println(" Research Access: " + loggedInUser.canAccessResearchPapers());
                 return loggedInUser;
             } else {
                 System.out.println("❌ Invalid email or password.");
@@ -124,7 +124,11 @@ public class UserController {
         }
     }
 
-    public void getUsers() {
+    public void searchUsers(User loggedInUser) {
+        if (loggedInUser == null || !"Admin".equalsIgnoreCase(loggedInUser.getRole())) {
+            System.out.println("❌ Only Admin can update book info.");
+            return;
+        }
         System.out.println("Choose search type:");
         System.out.println("1. Search by Name");
         System.out.println("2. Search by Email");
@@ -181,6 +185,43 @@ public class UserController {
         }
     }
 
+    public void getAllUsers(User loggedInUser) {
+        if (loggedInUser == null || !"Admin".equalsIgnoreCase(loggedInUser.getRole())) {
+            System.out.println("❌ Only Admin can update book info.");
+            return;
+        }
+        try {
+
+            SearchStrategy<User> strategy = new NameSearch();
+            SearchContext<User> context = new SearchContext<>();
+            context.setStrategy(strategy);
+            List<User> users = context.executeSearch("");
+            if (users == null || users.isEmpty()) {
+                System.out.println("⚠️ No users found.");
+                return;
+            }
+
+            System.out.printf("%-5s %-15s %-15s %-30s %-20s %-20s%n",
+                    "ID", "First Name", "Last Name", "Email", "Role", "Registered");
+            System.out.println("-----------------------------------------------------------------------------------------------------------------------------");
+
+            for (User usr : users) {
+                System.out.printf("%-5d %-15s %-15s %-30s %-20s %-20s%n",
+                        usr.getUserId(),
+                        usr.getFirstName(),
+                        usr.getLastName(),
+                        usr.getEmail(),
+                        usr.getRole(),
+                        usr.getRegistrationDate() != null ? usr.getRegistrationDate().toString() : "N/A");
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Error during search: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+
+    }
+
     public User updateProfile(User user) {
         System.out.println("=== Update Profile ===");
 
@@ -210,16 +251,12 @@ public class UserController {
             }
             return updatedUser;
         } catch (Exception e) {
-            System.out.println("❌ Error during search: " + e.getMessage());
+            System.out.println("❌ Error during Profile Update: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
 
     }
-
-
-
-
 
 
     public void close() {

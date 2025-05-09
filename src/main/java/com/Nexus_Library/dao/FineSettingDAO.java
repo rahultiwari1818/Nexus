@@ -9,20 +9,20 @@ import java.util.List;
 
 public class FineSettingDAO {
 
-    public FineSetting addNewFineSetting(String userType, int amt, String activeStatus) throws SQLException {
-        String insertQuery = "INSERT INTO fine_settings (user_type, fine_per_day, active_status) VALUES (?, ?, ?) RETURNING id";
+    public FineSetting addNewFineSetting(String userType, int amt, boolean activeStatus) throws SQLException {
+        String insertQuery = "INSERT INTO fine_settings (user_type, fine_amt, active) VALUES (?, ?, ?) RETURNING fine_setting_id";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(insertQuery)) {
 
             stmt.setString(1, userType);
             stmt.setInt(2, amt);
-            stmt.setString(3, activeStatus);
+            stmt.setBoolean(3, activeStatus);
 
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 FineSetting setting = new FineSetting();
-                setting.setId(rs.getInt("id"));
+                setting.setId(rs.getInt("fine_setting_id"));
                 setting.setUserType(userType);
                 setting.setFinePerDay(amt);
                 setting.setActiveStatus(activeStatus);
@@ -38,7 +38,7 @@ public class FineSettingDAO {
     }
 
     public boolean updateFineSettingAmt(int fineSettingId, int newFineAmount) throws SQLException {
-        String updateQuery = "UPDATE fine_settings SET fine_per_day = ? WHERE id = ?";
+        String updateQuery = "UPDATE fine_settings SET fine_amt = ? WHERE fine_setting_id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(updateQuery)) {
@@ -53,13 +53,13 @@ public class FineSettingDAO {
         }
     }
 
-    public boolean updateFineSettingActiveStatus(int fineSettingId, String newStatus) throws SQLException {
-        String updateQuery = "UPDATE fine_settings SET active_status = ? WHERE id = ?";
+    public boolean updateFineSettingActiveStatus(int fineSettingId, Boolean newStatus) throws SQLException {
+        String updateQuery = "UPDATE fine_settings SET active = ? WHERE fine_setting_id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(updateQuery)) {
 
-            stmt.setString(1, newStatus);
+            stmt.setBoolean(1, newStatus);
             stmt.setInt(2, fineSettingId);
 
             return stmt.executeUpdate() > 0;
@@ -70,7 +70,7 @@ public class FineSettingDAO {
     }
 
     public boolean deleteFineSetting(int fineSettingId) throws SQLException {
-        String deleteQuery = "DELETE FROM fine_settings WHERE id = ?";
+        String deleteQuery = "DELETE FROM fine_settings WHERE fine_setting_id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(deleteQuery)) {
@@ -112,10 +112,10 @@ public class FineSettingDAO {
 
             while (rs.next()) {
                 FineSetting setting = new FineSetting();
-                setting.setId(rs.getInt("id"));
+                setting.setId(rs.getInt("fine_setting_id"));
                 setting.setUserType(rs.getString("user_type"));
-                setting.setFinePerDay(rs.getInt("fine_per_day"));
-                setting.setActiveStatus(rs.getString("active_status"));
+                setting.setFinePerDay(rs.getInt("fine_amt"));
+                setting.setActiveStatus(rs.getBoolean("active"));
                 fineSettings.add(setting);
             }
 

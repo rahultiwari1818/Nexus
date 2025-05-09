@@ -96,7 +96,7 @@ public class UserDAO {
 //    ---- Update Profile ------------------------------------------------------------------------
 
     public User updateProfile(User user) throws SQLException {
-        String query = "UPDATE users SET first_name = ?, last_name = ?, email = ?, password = ? WHERE user_id = ? RETURNING user_id, user_type_id, first_name, last_name, email, password, registration_date";
+        String query = "UPDATE users SET first_name = ?, last_name = ?, email = ?, password = ? WHERE user_id = ? RETURNING user_id, first_name, last_name, email, password, registration_date,role";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {

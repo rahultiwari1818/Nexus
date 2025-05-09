@@ -5,6 +5,7 @@ import com.Nexus_Library.dao.LibraryItemDAO;
 import com.Nexus_Library.dao.TransactionDAO;
 import com.Nexus_Library.dao.UserDAO;
 import com.Nexus_Library.model.LibraryItem;
+import com.Nexus_Library.model.Transaction;
 import com.Nexus_Library.model.User;
 import com.Nexus_Library.utils.ValidationUtils;
 
@@ -12,6 +13,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Scanner;
 
 public class TransactionController {
@@ -79,7 +81,7 @@ public class TransactionController {
         LibraryItem item = libraryItemDAO.getItemById(itemId);;
 
         try {
-            return transactionDAO.borrowBook(loggedInUser, itemId, item);
+            return transactionDAO.returnBook(loggedInUser, itemId, item);
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -94,8 +96,17 @@ public class TransactionController {
         }
 
         try {
-
-        } catch (Exception e) {
+            List<Transaction> transactions = transactionDAO.getAllActiveTransactionsByUser(loggedInUser);
+            if (transactions.isEmpty()) {
+                System.out.println("❌ No Active Transactions found.");
+            } else {
+                System.out.println("\n===== Active Transactions =====");
+                for (Transaction transaction : transactions) {
+                    System.out.println("Item ID: " + transaction.getItemId() +
+                            ", Borrowed: " + transaction.getTransactionDate() +
+                            ", Due: " + transaction.getDueDate() +
+                            ", Returned: " + (transaction.getReturnDate() != null ? transaction.getReturnDate() : "Not Returned Yet"));}
+            }        } catch (Exception e) {
             System.out.println("❌ Error retrieving borrowings: " + e.getMessage());
         }
     }
@@ -107,25 +118,81 @@ public class TransactionController {
         }
 
         try {
-            String query = "SELECT item_id, transaction_date, due_date, return_date, fine_amount FROM transactions WHERE user_id = ? AND status IN ('Completed', 'Overdue')";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, loggedInUser.getUserId());
-                ResultSet rs = stmt.executeQuery();
-                System.out.println("Borrowing History:");
-                while (rs.next()) {
-                    System.out.println("Item ID: " + rs.getInt("item_id") +
-                            ", Borrowed: " + rs.getTimestamp("transaction_date") +
-                            ", Due: " + rs.getTimestamp("due_date") +
-                            ", Returned: " + rs.getTimestamp("return_date") +
-                            ", Fine: $" + rs.getDouble("fine_amount"));
-                }
+            // Get all transactions for the user
+            List<Transaction> transactions = transactionDAO.getAllTransactionsByUser(loggedInUser.getUserId());
+
+            if (transactions.isEmpty()) {
+                System.out.println("❌ No borrowing history found.");
+            } else {
+                System.out.println("\n===== Borrowing History =====");
+                for (Transaction transaction : transactions) {
+                    System.out.println("Item ID: " + transaction.getItemId() +
+                            ", Borrowed: " + transaction.getTransactionDate() +
+                            ", Due: " + transaction.getDueDate() +
+                            ", Returned: " + (transaction.getReturnDate() != null ? transaction.getReturnDate() : "Not Returned Yet"));}
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             System.out.println("❌ Error retrieving history: " + e.getMessage());
         }
     }
 
+    public void viewAllActiveTransactions(User loggedInUser) {
+        if (loggedInUser == null || !"Admin".equalsIgnoreCase(loggedInUser.getRole())) {
+            System.out.println("❌ Only Admin can view active transactions.");
+            return;
+        }
+
+        try {
+            List<Transaction> activeTransactions = transactionDAO.getActiveTransactions();
+
+            if (activeTransactions.isEmpty()) {
+                System.out.println("❌ No active transactions found.");
+            } else {
+                System.out.println("\n===== Active Transactions =====");
+                for (Transaction transaction : activeTransactions) {
+                    System.out.println("Transaction ID: " + transaction.getTransactionId() +
+                            ", User ID: " + transaction.getUserId() +
+                            ", Item ID: " + transaction.getItemId() +
+                            ", Type: " + transaction.getTransactionType() +
+                            ", Borrowed: " + transaction.getTransactionDate() +
+                            ", Due: " + transaction.getDueDate() +
+                            ", Status: " + transaction.getStatus());
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("❌ Error retrieving active transactions: " + e.getMessage());
+        }
+    }
+
+    // View all transactions for Admin user
+    public void viewAllTransactions(User loggedInUser) {
+        if (loggedInUser == null || !"Admin".equalsIgnoreCase(loggedInUser.getRole())) {
+            System.out.println("❌ Only Admin can view all transactions.");
+            return;
+        }
+
+        try {
+            List<Transaction> allTransactions = transactionDAO.getAllTransactions();
+
+            if (allTransactions.isEmpty()) {
+                System.out.println("❌ No transactions found.");
+            } else {
+                System.out.println("\n===== All Transactions =====");
+                for (Transaction transaction : allTransactions) {
+                    System.out.println("Transaction ID: " + transaction.getTransactionId() +
+                            ", User ID: " + transaction.getUserId() +
+                            ", Item ID: " + transaction.getItemId() +
+                            ", Type: " + transaction.getTransactionType() +
+                            ", Borrowed: " + transaction.getTransactionDate() +
+                            ", Due: " + transaction.getDueDate() +
+                            ", Returned: " + (transaction.getReturnDate() != null ? transaction.getReturnDate() : "Not Returned Yet") +
+                            ", Status: " + transaction.getStatus());
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("❌ Error retrieving all transactions: " + e.getMessage());
+        }
+    }
 
 
 }

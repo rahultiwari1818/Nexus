@@ -39,6 +39,5 @@ public abstract class User {
     public void setRole(String role) { this.role = role; }
 
     // Abstract methods for Polymorphism
-    public abstract int getBorrowLimit(); // Different limits per role
     public abstract boolean canAccessResearchPapers(); // Role-based access
 }

@@ -8,10 +8,6 @@ public class Student extends User {
         super(userId, firstName, lastName, email, password, registrationDate, "Student");
     }
 
-    @Override
-    public int getBorrowLimit() {
-        return 5; // Limited to 2 items
-    }
 
     @Override
     public boolean canAccessResearchPapers() {

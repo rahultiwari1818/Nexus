@@ -8,10 +8,6 @@ public class Admin extends User {
         super(userId, firstName, lastName, email, password, registrationDate, "Admin");
     }
 
-    @Override
-    public int getBorrowLimit() {
-        return 0; // Admins don’t borrow, they manage
-    }
 
     @Override
     public boolean canAccessResearchPapers() {

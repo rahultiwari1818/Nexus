@@ -10,18 +10,17 @@ import java.util.List;
 
 public class LibraryItemDAO {
     public boolean addItem(LibraryItem item) throws SQLException {
-        String query = "INSERT INTO library_items (item_id, title, author, isbn, is_available, added_date, type, extra_param) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO library_items ( title, author, isbn, is_available, added_date, type, extra_param) " +
+                "VALUES ( ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setInt(1, item.getItemId());
-            stmt.setString(2, item.getTitle());
-            stmt.setString(3, item.getAuthor());
-            stmt.setString(4, item.getIsbn());
-            stmt.setBoolean(5, item.isAvailable());
-            stmt.setTimestamp(6, item.getAddedDate());
-            stmt.setString(7, item.getItemType());
-            stmt.setString(8, getExtraParam(item)); // Handles type-specific data
+            stmt.setString(1, item.getTitle());
+            stmt.setString(2, item.getAuthor());
+            stmt.setString(3, item.getIsbn());
+            stmt.setBoolean(4, item.isAvailable());
+            stmt.setTimestamp(5, item.getAddedDate());
+            stmt.setString(6, item.getItemType());
+            stmt.setString(7, getExtraParam(item)); // Handles type-specific data
             int rowsAffected = stmt.executeUpdate();
             if (rowsAffected > 0 && item.getItemId() == 0) {
                 ResultSet generatedKeys = stmt.getGeneratedKeys();
@@ -229,6 +228,19 @@ public class LibraryItemDAO {
             return rowsAffected > 0;
         }
     }
+
+
+    public boolean deleteItemById(int itemId) throws SQLException {
+        String query = "DELETE FROM library_items WHERE item_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, itemId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+
+
 
     private String getExtraParam(LibraryItem item) {
         if (item instanceof EBook) return ((EBook) item).getFileFormat();

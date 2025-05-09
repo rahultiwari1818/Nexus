@@ -8,10 +8,6 @@ public class Faculty extends User {
         super(userId, firstName, lastName, email, password, registrationDate, "Faculty");
     }
 
-    @Override
-    public int getBorrowLimit() {
-        return Integer.MAX_VALUE; // Unlimited borrowing
-    }
 
     @Override
     public boolean canAccessResearchPapers() {

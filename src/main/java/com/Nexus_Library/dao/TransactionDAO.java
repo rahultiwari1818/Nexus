@@ -1,6 +1,7 @@
 package com.Nexus_Library.dao;
 
 import com.Nexus_Library.config.DBConnection;
+import com.Nexus_Library.model.BorrowingSetting;
 import com.Nexus_Library.model.LibraryItem;
 import com.Nexus_Library.model.Transaction;
 import com.Nexus_Library.model.User;
@@ -15,15 +16,29 @@ import java.util.List;
 
 public class TransactionDAO {
 
-     LibraryItemDAO libraryItemDAO;
-     FineDAO fineDAO;
+     private  final LibraryItemDAO libraryItemDAO;
+     private  final FineDAO fineDAO;
+     private final BorrowingSettingDAO borrowingSettingDAO;
+
      public TransactionDAO(){
          libraryItemDAO = new LibraryItemDAO();
          fineDAO = new FineDAO();
+         borrowingSettingDAO = new BorrowingSettingDAO();
      }
 
     public boolean borrowBook(User loggedInUser, int itemId, LibraryItem item) throws SQLException {
         try {
+
+            int activeTransactions = getAllActiveTransactionsCountByUser(loggedInUser);
+            int allowedTransactions = borrowingSettingDAO.getMaxBorrowPerUserType(loggedInUser);
+
+            if(activeTransactions >= allowedTransactions) {
+                System.out.println("❌ Max Borrowing Limit Reached .!");
+
+                return false;
+            }
+
+            int getMaxBorrowedDays = borrowingSettingDAO.getMaxBorrowPerUserType(loggedInUser);
 
             String query = "INSERT INTO transactions (user_id, item_id, transaction_type, due_date, status) VALUES (?, ?, ?, ?, ?)";
             try (Connection conn = DBConnection.getConnection();
@@ -31,7 +46,7 @@ public class TransactionDAO {
                 stmt.setInt(1, loggedInUser.getUserId());
                 stmt.setInt(2, itemId);
                 stmt.setString(3, "Borrow");
-                stmt.setTimestamp(4, new Timestamp(System.currentTimeMillis() + (item.getMaxBorrowDays() * 24 * 60 * 60 * 1000L)));
+                stmt.setTimestamp(4, new Timestamp(System.currentTimeMillis() + (getMaxBorrowedDays * 24 * 60 * 60 * 1000L)));
                 stmt.setString(5, "Active");
                 int rowsAffected = stmt.executeUpdate();
                 if (rowsAffected > 0 && libraryItemDAO.updateAvailability(itemId, false)) {
@@ -46,7 +61,6 @@ public class TransactionDAO {
     }
 
     public boolean returnBook(User loggedInUser, int itemId, LibraryItem item) throws SQLException {
-
         try {
             String query = "UPDATE transactions SET return_date = ?, status = ? WHERE user_id = ? AND item_id = ? AND status = 'Active'";
             try (Connection conn = DBConnection.getConnection();
@@ -73,24 +87,48 @@ public class TransactionDAO {
 
 
 
-    public boolean getAllActiveTransactionsByUser(User loggedInUser) throws SQLException {
-        try {
-            String query = "SELECT item_id FROM transactions WHERE user_id = ? AND status = 'Active'";
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setInt(1, loggedInUser.getUserId());
-                ResultSet rs = stmt.executeQuery();
-                List<Integer> borrowedItems = new ArrayList<>();
-                while (rs.next()) {
-                    borrowedItems.add(rs.getInt("item_id"));
-                }
-                System.out.println("Current Borrowings (" + borrowedItems.size() + "): " + borrowedItems);
+    public int getAllActiveTransactionsCountByUser(User loggedInUser) throws SQLException {
+        String query = "SELECT COUNT(*) AS active_count FROM transactions WHERE user_id = ? AND status = 'Active'";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, loggedInUser.getUserId());
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("active_count");
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw e;
         }
-        return false;
+
+        return 0; // If query fails or user has no active transactions
+    }
+
+    public List<Transaction> getAllActiveTransactionsByUser(User loggedInUser) throws SQLException{
+        String query = "SELECT * FROM transactions WHERE user_id = ? AND status = 'Active'";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, loggedInUser.getUserId());
+            ResultSet rs = stmt.executeQuery();
+            List<Transaction> transactions = new ArrayList<>();
+            while (rs.next()) {
+                Transaction transaction = new Transaction(
+                        rs.getInt("transaction_id"),
+                        rs.getInt("user_id"),
+                        rs.getInt("item_id"),
+                        rs.getString("transaction_type"),
+                        rs.getTimestamp("transaction_date"),
+                        rs.getTimestamp("due_date"),
+                        rs.getTimestamp("return_date"),
+                        rs.getString("status")
+                );
+                transactions.add(transaction);
+            }
+            return transactions;
+        }
+
     }
 
 
@@ -143,15 +181,15 @@ public class TransactionDAO {
     }
 
     // Retrieve active transaction for a user and item
-    public Transaction getActiveTransaction(int userId, int itemId) throws SQLException {
-        String query = "SELECT * FROM transactions WHERE user_id = ? AND item_id = ? AND status = 'Active'";
+    public List<Transaction> getActiveTransactions() throws SQLException {
+        String query = "SELECT * FROM transactions WHERE  status = 'Active'";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, userId);
-            stmt.setInt(2, itemId);
             ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return new Transaction(
+            List<Transaction> transactions = new ArrayList<>();
+
+            while (rs.next()) {
+                transactions.add( new Transaction(
                         rs.getInt("transaction_id"),
                         rs.getInt("user_id"),
                         rs.getInt("item_id"),
@@ -160,11 +198,36 @@ public class TransactionDAO {
                         rs.getTimestamp("due_date"),
                         rs.getTimestamp("return_date"),
                         rs.getString("status")
-                );
+                ));
             }
-            return null;
+            return transactions;
         }
     }
+
+    public List<Transaction> getAllTransactions() throws SQLException {
+        String query = "SELECT * FROM transactions";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            ResultSet rs = stmt.executeQuery();
+            List<Transaction> transactions = new ArrayList<>();
+
+            while (rs.next()) {
+                transactions.add( new Transaction(
+                        rs.getInt("transaction_id"),
+                        rs.getInt("user_id"),
+                        rs.getInt("item_id"),
+                        rs.getString("transaction_type"),
+                        rs.getTimestamp("transaction_date"),
+                        rs.getTimestamp("due_date"),
+                        rs.getTimestamp("return_date"),
+                        rs.getString("status")
+                ));
+            }
+            return transactions;
+        }
+    }
+
+
 
     // Update a transaction (e.g., set return_date, status)
     public boolean updateTransaction(Transaction transaction) throws SQLException {

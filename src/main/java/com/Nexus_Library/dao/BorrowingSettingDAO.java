@@ -2,6 +2,8 @@ package com.Nexus_Library.dao;
 
 import com.Nexus_Library.config.DBConnection;
 import com.Nexus_Library.model.BorrowingSetting;
+import com.Nexus_Library.model.User;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -86,4 +88,24 @@ public class BorrowingSettingDAO {
 
         return settings;
     }
+
+    public int getMaxBorrowPerUserType(User loggedInUser) throws SQLException {
+        String sql = "SELECT borrowing_limit FROM borrowing_settings WHERE user_type = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, loggedInUser.getRole());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("borrowing_limit");
+                } else {
+                    // If no setting is found, return a default value or throw an exception
+                    System.out.println("⚠️ No borrowing setting found for user type: " + loggedInUser.getRole());
+                    return 0;
+                }
+            }
+        }
+    }
+
+
 }

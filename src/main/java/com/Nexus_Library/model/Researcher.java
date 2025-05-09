@@ -8,10 +8,7 @@ public class Researcher extends User {
         super(userId, firstName, lastName, email, password, registrationDate, "Researcher");
     }
 
-    @Override
-    public int getBorrowLimit() {
-        return 10; // Researchers can borrow more
-    }
+
 
     @Override
     public boolean canAccessResearchPapers() {

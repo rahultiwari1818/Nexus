@@ -35,14 +35,14 @@ public class MainApp {
                     case 2:
                         loggedInUser = libraryFacade.loginUser();
                         if (loggedInUser != null) {
-                            System.out.println("✅ Logged in as " + loggedInUser.getFirstName() + " (" + loggedInUser.getRole() + ")");
+                            System.out.println("-------------------------------------✅ Logged in as " + loggedInUser.getFirstName() + " (" + loggedInUser.getRole() + ") --------------------------------------------------");
                         }
                         break;
                     case 3:
                         libraryFacade.searchBook();
                         break;
                     case 4:
-                        System.out.println("👋 Exiting... Thank you for using Nexus Library!");
+                        System.out.println("--------------------------------------------------👋 Exiting... Thank you for using Nexus Library!-----------------------------------");
                         libraryFacade.close();
                         scanner.close();
                         System.exit(0);
@@ -52,22 +52,37 @@ public class MainApp {
                 }
             }
 
+            // ------------------ Admin Menu ------------------ //
             else if ("Admin".equalsIgnoreCase(loggedInUser.getRole())) {
-                System.out.println("\n=== Admin Menu ===");
+                System.out.println("\n===== Admin Menu =====");
                 System.out.println("1. Add Library Item");
-                System.out.println("2. Delete Book");
-                System.out.println("3. Update Book Info");
-                System.out.println("4. Take Fine");
-                System.out.println("5. Update Profile");
-                System.out.println("6. View Users");
-                System.out.println("7. Logout");
+                System.out.println("2. Delete Library Item");
+                System.out.println("3. Update Library Item");
+                System.out.println("4. View All Library Items");
+                System.out.println("5. Add Fine Setting");
+                System.out.println("6. Remove Fine Setting");
+                System.out.println("7. Update Fine Status");
+                System.out.println("8. Update Fine Amount");
+                System.out.println("9. Add Borrowing Setting");
+                System.out.println("10. Update Borrowing Limit");
+                System.out.println("11. Update Borrowing Active Status");
+                System.out.println("12. Remove Borrowing Setting");
+                System.out.println("13. Display All Borrowing Settings");
+                System.out.println("14. View All Transactions");
+                System.out.println("15. View Current Borrowings");
+                System.out.println("16. View All Users");
+                System.out.println("17. Search Books");
+                System.out.println("18. Search Users");
+                System.out.println("19. View Fine Settings");
+                System.out.println("20. Update Profile");
+                System.out.println("21. Logout");
+                System.out.print("Enter your choice (1-21): ");
 
-                System.out.print("Enter your choice (1-7): ");
                 int choice;
                 try {
                     choice = Integer.parseInt(scanner.nextLine());
                 } catch (Exception e) {
-                    System.out.println("❌ Invalid input. Please enter a number between 1 and 7.");
+                    System.out.println("❌ Invalid input. Please enter a number between 1 and 21.");
                     continue;
                 }
 
@@ -82,23 +97,67 @@ public class MainApp {
                         libraryFacade.updateBook(loggedInUser);
                         break;
                     case 4:
-                        libraryFacade.takeFine(loggedInUser);
+                        libraryFacade.viewAllLibraryItems();
                         break;
                     case 5:
-                        loggedInUser = libraryFacade.updateProfile(loggedInUser);
+                        libraryFacade.addFineSetting(loggedInUser);
                         break;
                     case 6:
-                        libraryFacade.viewUsers();
+                        libraryFacade.removeFineSetting(loggedInUser);
                         break;
                     case 7:
+                        libraryFacade.updateFineStatus(loggedInUser);
+                        break;
+                    case 8:
+                        libraryFacade.updateFineAmount(loggedInUser);
+                        break;
+                    case 9:
+                        libraryFacade.addBorrowingSetting(loggedInUser);
+                        break;
+                    case 10:
+                        libraryFacade.updateBorrowingLimit(loggedInUser);
+                        break;
+                    case 11:
+                        libraryFacade.updateBorrowingActiveStatus(loggedInUser);
+                        break;
+                    case 12:
+                        libraryFacade.deleteBorrowingSetting(loggedInUser);
+                        break;
+                    case 13:
+                        libraryFacade.displayAllBorrowingSettings(loggedInUser);
+                        break;
+                    case 14:
+                        libraryFacade.viewAllTransactions(loggedInUser);
+                        break;
+                    case 15:
+                        libraryFacade.viewAllCurrentBorrowings(loggedInUser);
+                        break;
+                    case 16:
+                        libraryFacade.viewUsers(loggedInUser);
+                        break;
+                    case 17:
+                        libraryFacade.searchBook();
+                        break;
+                    case 18:
+                        libraryFacade.searchUsers(loggedInUser);
+                        break;
+                    case 19:
+                        libraryFacade.viewAllFineSettings(loggedInUser);
+                        break;
+                    case 20:
+                        loggedInUser = libraryFacade.updateProfile(loggedInUser);
+                        break;
+                    case 21:
                         loggedInUser = null;
+//                        libraryFacade.logout();
                         System.out.println("✅ Logged out successfully!");
                         break;
                     default:
-                        System.out.println("⚠️ Invalid choice. Please enter a number between 1 and 7.");
+                        System.out.println("⚠️ Invalid choice. Please enter a number between 1 and 21.");
                 }
             }
 
+            // ------------------ Student / Faculty / Researcher Menu ------------------ //
             else {
                 System.out.println("\n===== Nexus Library - Welcome, " + loggedInUser.getFirstName() + " (" + loggedInUser.getRole() + ") =====");
                 System.out.println("1. Borrow Book");
