@@ -17,8 +17,9 @@ public class MainApp {
                 System.out.println("1. Register");
                 System.out.println("2. Login");
                 System.out.println("3. Search Book");
-                System.out.println("4. Exit");
-                System.out.print("Enter your choice (1-4): ");
+                System.out.println("4. View All Book");
+                System.out.println("5. Exit");
+                System.out.print("Enter your choice (1-5): ");
 
                 int choice;
                 try {
@@ -42,6 +43,9 @@ public class MainApp {
                         libraryFacade.searchBook();
                         break;
                     case 4:
+                        libraryFacade.viewAllLibraryItems();
+                        break;
+                    case 5:
                         System.out.println("--------------------------------------------------👋 Exiting... Thank you for using Nexus Library!-----------------------------------");
                         libraryFacade.close();
                         scanner.close();
@@ -78,7 +82,7 @@ public class MainApp {
                 System.out.println("21. View ALl Pending Fines ");
                 System.out.println("22. View All Fines ");
                 System.out.println("23. Logout");
-                System.out.print("Enter your choice (1-21): ");
+                System.out.print("Enter your choice (1-23): ");
 
                 int choice;
                 try {

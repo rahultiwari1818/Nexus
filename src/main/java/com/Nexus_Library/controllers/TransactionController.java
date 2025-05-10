@@ -53,6 +53,10 @@ public class TransactionController {
             return false;
         }
 
+        if(item.getItemType().equalsIgnoreCase("researchpaper") && !loggedInUser.canAccessResearchPapers()){
+            System.out.println("❌ You Can Not Access Research Paper.");
+            return false;
+        }
 
         try {
             return transactionDAO.borrowBook(loggedInUser, itemId, item);
@@ -101,12 +105,19 @@ public class TransactionController {
                 System.out.println("❌ No Active Transactions found.");
             } else {
                 System.out.println("\n===== Active Transactions =====");
+                System.out.printf("%-10s %-25s %-25s %-25s%n", "Item ID", "Borrowed Date", "Due Date", "Return Date");
+                System.out.println("-----------------------------------------------------------------------------------------------------------------------------");
+
                 for (Transaction transaction : transactions) {
-                    System.out.println("Item ID: " + transaction.getItemId() +
-                            ", Borrowed: " + transaction.getTransactionDate() +
-                            ", Due: " + transaction.getDueDate() +
-                            ", Returned: " + (transaction.getReturnDate() != null ? transaction.getReturnDate() : "Not Returned Yet"));}
-            }        } catch (Exception e) {
+                    System.out.printf("%-10d %-25s %-25s %-25s%n",
+                            transaction.getItemId(),
+                            transaction.getTransactionDate(),
+                            transaction.getDueDate(),
+                            transaction.getReturnDate() != null ? transaction.getReturnDate() : "Not Returned Yet"
+                    );
+                }
+            }
+        } catch (Exception e) {
             System.out.println("❌ Error retrieving borrowings: " + e.getMessage());
         }
     }
@@ -118,18 +129,21 @@ public class TransactionController {
         }
 
         try {
-            // Get all transactions for the user
             List<Transaction> transactions = transactionDAO.getAllTransactionsByUser(loggedInUser.getUserId());
-
             if (transactions.isEmpty()) {
                 System.out.println("❌ No borrowing history found.");
             } else {
                 System.out.println("\n===== Borrowing History =====");
+                System.out.printf("%-10s %-25s %-25s %-25s%n", "Item ID", "Borrowed Date", "Due Date", "Return Date");
+                System.out.println("-----------------------------------------------------------------------------------------------------------------------------");
                 for (Transaction transaction : transactions) {
-                    System.out.println("Item ID: " + transaction.getItemId() +
-                            ", Borrowed: " + transaction.getTransactionDate() +
-                            ", Due: " + transaction.getDueDate() +
-                            ", Returned: " + (transaction.getReturnDate() != null ? transaction.getReturnDate() : "Not Returned Yet"));}
+                    System.out.printf("%-10d %-25s %-25s %-25s%n",
+                            transaction.getItemId(),
+                            transaction.getTransactionDate(),
+                            transaction.getDueDate(),
+                            transaction.getReturnDate() != null ? transaction.getReturnDate() : "Not Returned Yet"
+                    );
+                }
             }
         } catch (SQLException e) {
             System.out.println("❌ Error retrieving history: " + e.getMessage());
@@ -144,19 +158,25 @@ public class TransactionController {
 
         try {
             List<Transaction> activeTransactions = transactionDAO.getActiveTransactions();
-
             if (activeTransactions.isEmpty()) {
                 System.out.println("❌ No active transactions found.");
             } else {
                 System.out.println("\n===== Active Transactions =====");
+                System.out.printf("%-15s %-10s %-10s %-12s %-25s %-25s %-10s%n",
+                        "Transaction ID", "User ID", "Item ID", "Type", "Borrowed", "Due", "Status");
+                System.out.println("-----------------------------------------------------------------------------------------------------------------------------");
+
+
                 for (Transaction transaction : activeTransactions) {
-                    System.out.println("Transaction ID: " + transaction.getTransactionId() +
-                            ", User ID: " + transaction.getUserId() +
-                            ", Item ID: " + transaction.getItemId() +
-                            ", Type: " + transaction.getTransactionType() +
-                            ", Borrowed: " + transaction.getTransactionDate() +
-                            ", Due: " + transaction.getDueDate() +
-                            ", Status: " + transaction.getStatus());
+                    System.out.printf("%-15d %-10d %-10d %-12s %-25s %-25s %-10s%n",
+                            transaction.getTransactionId(),
+                            transaction.getUserId(),
+                            transaction.getItemId(),
+                            transaction.getTransactionType(),
+                            transaction.getTransactionDate(),
+                            transaction.getDueDate(),
+                            transaction.getStatus()
+                    );
                 }
             }
         } catch (SQLException e) {
@@ -173,20 +193,25 @@ public class TransactionController {
 
         try {
             List<Transaction> allTransactions = transactionDAO.getAllTransactions();
-
             if (allTransactions.isEmpty()) {
                 System.out.println("❌ No transactions found.");
             } else {
                 System.out.println("\n===== All Transactions =====");
+                System.out.printf("%-15s %-10s %-10s %-12s %-25s %-25s %-25s %-10s%n",
+                        "Transaction ID", "User ID", "Item ID", "Type", "Borrowed", "Due", "Returned", "Status");
+                System.out.println("-----------------------------------------------------------------------------------------------------------------------------");
+
                 for (Transaction transaction : allTransactions) {
-                    System.out.println("Transaction ID: " + transaction.getTransactionId() +
-                            ", User ID: " + transaction.getUserId() +
-                            ", Item ID: " + transaction.getItemId() +
-                            ", Type: " + transaction.getTransactionType() +
-                            ", Borrowed: " + transaction.getTransactionDate() +
-                            ", Due: " + transaction.getDueDate() +
-                            ", Returned: " + (transaction.getReturnDate() != null ? transaction.getReturnDate() : "Not Returned Yet") +
-                            ", Status: " + transaction.getStatus());
+                    System.out.printf("%-15d %-10d %-10d %-12s %-25s %-25s %-25s %-10s%n",
+                            transaction.getTransactionId(),
+                            transaction.getUserId(),
+                            transaction.getItemId(),
+                            transaction.getTransactionType(),
+                            transaction.getTransactionDate(),
+                            transaction.getDueDate(),
+                            transaction.getReturnDate() != null ? transaction.getReturnDate() : "Not Returned Yet",
+                            transaction.getStatus()
+                    );
                 }
             }
         } catch (SQLException e) {

@@ -34,9 +34,10 @@ public class TransactionDAO {
 
             if(activeTransactions >= allowedTransactions) {
                 System.out.println("❌ Max Borrowing Limit Reached .!");
-
                 return false;
             }
+
+                
 
             int getMaxBorrowedDays = borrowingSettingDAO.getMaxBorrowPerUserType(loggedInUser);
 
