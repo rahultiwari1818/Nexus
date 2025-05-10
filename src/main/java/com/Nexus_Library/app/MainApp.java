@@ -75,7 +75,9 @@ public class MainApp {
                 System.out.println("18. Search Users");
                 System.out.println("19. View Fine Settings");
                 System.out.println("20. Update Profile");
-                System.out.println("21. Logout");
+                System.out.println("21. View ALl Pending Fines ");
+                System.out.println("22. View All Fines ");
+                System.out.println("23. Logout");
                 System.out.print("Enter your choice (1-21): ");
 
                 int choice;
@@ -148,6 +150,12 @@ public class MainApp {
                         loggedInUser = libraryFacade.updateProfile(loggedInUser);
                         break;
                     case 21:
+                        libraryFacade.viewAllPendingFines(loggedInUser);
+                        break;
+                    case 22:
+                        libraryFacade.viewAllFines(loggedInUser);
+                        break;
+                    case 23:
                         loggedInUser = null;
 //                        libraryFacade.logout();
                         System.out.println("✅ Logged out successfully!");

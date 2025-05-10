@@ -62,7 +62,10 @@ public class TransactionDAO {
 
     public boolean returnBook(User loggedInUser, int itemId, LibraryItem item) throws SQLException {
         try {
-            String query = "UPDATE transactions SET return_date = ?, status = ? WHERE user_id = ? AND item_id = ? AND status = 'Active'";
+            boolean isFineApplied = fineDAO.checkAndApplyFine(loggedInUser, itemId, item); // Check for overdue and apply fine if needed
+
+            String query = "UPDATE transactions SET return_date = ?, status = ? WHERE user_id = ? AND item_id = ? AND status = '"
+                    + (isFineApplied ? "Overdue" : "Active") + "'";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
@@ -73,7 +76,6 @@ public class TransactionDAO {
                 if (rowsAffected > 0 && libraryItemDAO.updateAvailability(itemId, true)) {
                     System.out.println("✅ Book returned successfully!");
 
-                    fineDAO.checkAndApplyFine(loggedInUser, itemId, item); // Check for overdue and apply fine if needed
                     return true;
                 } else {
                     System.out.println("❌ No active borrowing found for this item.");

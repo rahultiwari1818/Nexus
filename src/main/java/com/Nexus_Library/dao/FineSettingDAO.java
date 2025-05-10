@@ -85,7 +85,7 @@ public class FineSettingDAO {
     }
 
     public int getFinePerDay(String userType) throws  SQLException{
-        String query = "SELECT * FROM fine_settings where userType = ?";
+        String query = "SELECT * FROM fine_settings where user_type = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 

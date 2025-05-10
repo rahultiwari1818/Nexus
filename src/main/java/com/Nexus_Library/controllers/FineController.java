@@ -2,13 +2,11 @@ package com.Nexus_Library.controllers;
 
 import com.Nexus_Library.config.DBConnection;
 import com.Nexus_Library.dao.FineDAO;
+import com.Nexus_Library.model.Fine;
 import com.Nexus_Library.model.User;
 import com.Nexus_Library.utils.ValidationUtils;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.util.List;
 import java.util.Scanner;
 
@@ -58,6 +56,77 @@ public class FineController {
             System.out.println("❌ Error during fine payment: " + e.getMessage());
         }
     }
+
+    public void viewAllFines(User loggedInUser) {
+        if (loggedInUser == null || !"Admin".equalsIgnoreCase(loggedInUser.getRole())) {
+            System.out.println("❌ Only Admin can view all fines.");
+            return;
+        }
+
+        try {
+            List<Fine> fines = fineDAO.getAllFines();
+            if (fines.isEmpty()) {
+                System.out.println("⚠️ No fines found.");
+                return;
+            }
+
+            System.out.printf("%-8s %-10s %-10s %-10s %-20s %-15s %-20s %-10s %-15s%n",
+                    "FineID", "UserID", "TxnID", "Amount", "Calc Date", "Status", "Payment Date", "WaivedBy", "Reason");
+
+            for (Fine fine : fines) {
+                System.out.printf("%-8d %-10d %-10d ₹%-9.2f %-20s %-15s %-20s %-10s %-15s%n",
+                        fine.getFineId(),
+                        fine.getUserId(),
+                        fine.getTransactionId(),
+                        fine.getFineAmount(),
+                        fine.getFineCalculatedDate() != null ? fine.getFineCalculatedDate().toString() : "N/A",
+                        fine.getPaymentStatus(),
+                        fine.getPaymentDate() != null ? fine.getPaymentDate().toString() : "N/A",
+                        fine.getWaivedBy() != null ? fine.getWaivedBy().toString() : "N/A",
+                        fine.getWaivedReason() != null ? fine.getWaivedReason() : "N/A"
+                );
+            }
+
+        } catch (SQLException e) {
+            System.out.println("❌ Error fetching fine records: " + e.getMessage());
+        }
+    }
+
+
+    public void viewAllPendingFines(User loggedInUser) {
+        if (loggedInUser == null || !"Admin".equalsIgnoreCase(loggedInUser.getRole())) {
+            System.out.println("❌ Only Admin can view all pending fines.");
+            return;
+        }
+
+        try {
+            List<Fine> pendingFines = fineDAO.getAllPendingFines();
+            if (pendingFines.isEmpty()) {
+                System.out.println("✅ No pending fines found.");
+            } else {
+                System.out.println("\n----- Pending Fines -----");
+                System.out.printf("%-8s %-10s %-10s %-10s %-20s %-15s %-20s %-10s %-15s%n",
+                        "FineID", "UserID", "TxnID", "Amount", "Calc Date", "Status", "Payment Date", "WaivedBy", "Reason");
+
+                for (Fine fine : pendingFines) {
+                    System.out.printf("%-8d %-10d %-10d ₹%-9.2f %-20s %-15s %-20s %-10s %-15s%n",
+                            fine.getFineId(),
+                            fine.getUserId(),
+                            fine.getTransactionId(),
+                            fine.getFineAmount(),
+                            fine.getFineCalculatedDate() != null ? fine.getFineCalculatedDate().toString() : "N/A",
+                            fine.getPaymentStatus(),
+                            fine.getPaymentDate() != null ? fine.getPaymentDate().toString() : "N/A",
+                            fine.getWaivedBy() != null ? fine.getWaivedBy().toString() : "N/A",
+                            fine.getWaivedReason() != null ? fine.getWaivedReason() : "N/A"
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Error retrieving pending fines: " + e.getMessage());
+        }
+    }
+
 
 
 }

@@ -9,7 +9,6 @@ import java.util.Properties;
 
 public class DBConnection {
     private static final Properties prop = new Properties();
-    private static Connection connection;
 
     static {
         // Load properties file once during class initialization
@@ -18,6 +17,7 @@ public class DBConnection {
                 throw new FileNotFoundException("Property file 'db.properties' not found in the classpath");
             }
             prop.load(input);
+//            System.out.println("Properties loaded successfully.");
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to load database properties", e);
@@ -26,16 +26,18 @@ public class DBConnection {
 
     private DBConnection() {}
 
-    public static synchronized Connection getConnection() {
+    public static Connection getConnection() {
         try {
-            if (connection == null || connection.isClosed()) {
-                String url = prop.getProperty("db.url");
-                String user = prop.getProperty("db.username");
-                String pass = prop.getProperty("db.password");
+            String url = prop.getProperty("db.url");
+            String user = prop.getProperty("db.username");
+            String pass = prop.getProperty("db.password");
 
-                connection = DriverManager.getConnection(url, user, pass);
+            Connection conn = DriverManager.getConnection(url, user, pass);
+            if (conn.isClosed()) {
+                throw new SQLException("Created connection is closed!");
             }
-            return connection;
+//            System.out.println("DB Connected");
+            return conn;
         } catch (SQLException e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to establish database connection", e);

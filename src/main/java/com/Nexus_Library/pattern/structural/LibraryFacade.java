@@ -139,6 +139,15 @@ public class LibraryFacade {
         fineController.payFine(user);
     }
 
+
+    public void viewAllPendingFines(User user){
+        fineController.viewAllPendingFines(user);
+    }
+
+    public void viewAllFines(User user){
+        fineController.viewAllFines(user);
+    }
+
     // Graceful shutdown
     public void close() {
         logout(); // uses logout logic to close necessary resources

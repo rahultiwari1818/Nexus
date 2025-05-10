@@ -123,14 +123,16 @@ public class FineDAO {
         try {
             int fineRateRupees = settingsDAO.getFinePerDay(loggedInUser.getRole()); // Fetch fine rate in rupees
             long daysOverdue = (System.currentTimeMillis() - dueDate.getTime()) / (1000 * 60 * 60 * 24);
+//            System.out.println(daysOverdue +" "+ fineRateRupees);
             return daysOverdue * fineRateRupees; // Fine amount in rupees
         } catch (SQLException e) {
+            System.out.println(e.getMessage());
             return 0.0;
         }
     }
 
 
-    public void checkAndApplyFine(User loggedInUser, int itemId, LibraryItem item) {
+    public boolean checkAndApplyFine(User loggedInUser, int itemId, LibraryItem item) {
         try {
             String query = "SELECT transaction_id, due_date FROM transactions WHERE user_id = ? AND item_id = ? AND status = 'Active'";
             try (Connection conn = DBConnection.getConnection();
@@ -168,19 +170,22 @@ public class FineDAO {
                             updateStmt.setInt(1, transactionId);
                             updateStmt.executeUpdate();
                         }
+                        return true;
                     }
+                    return false;
                 }
             }
         } catch (Exception e) {
             System.out.println("❌ Error checking fine: " + e.getMessage());
         }
+        return false;
     }
 
 
 
 
     public int getOutstandingFineAmount(int userId) throws SQLException {
-        String query = "SELECT SUM(fine_amount) AS total_fine FROM transactions WHERE user_id = ? AND fine_amount > 0 AND payment_status = 'Pending'";
+        String query = "SELECT SUM(fine_amount) AS total_fine FROM fines WHERE user_id = ? AND fine_amount > 0 AND payment_status = 'Pending'";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -230,5 +235,59 @@ public class FineDAO {
 
         return details;
     }
+
+    public List<Fine> getAllPendingFines() throws SQLException{
+        String sql = "SELECT * FROM fines where payment_status = 'Pending'";
+        List<Fine> fines = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                fines.add(new Fine(
+                        rs.getInt("fine_id"),
+                        rs.getInt("transaction_id"),
+                        rs.getInt("user_id"),
+                        rs.getDouble("fine_amount"),
+                        rs.getTimestamp("fine_calculated_date"),
+                        rs.getString("payment_status"),
+                        rs.getTimestamp("payment_date"),
+                        rs.getObject("waived_by") != null ? rs.getInt("waived_by") : null,
+                        rs.getString("waived_reason")
+                ));
+            }
+        }
+
+        return fines;
+    }
+
+    public List<Fine> getAllFines() throws SQLException {
+        String sql = "SELECT * FROM fines";
+        List<Fine> fines = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                fines.add(new Fine(
+                        rs.getInt("fine_id"),
+                        rs.getInt("transaction_id"),
+                        rs.getInt("user_id"),
+                        rs.getDouble("fine_amount"),
+                        rs.getTimestamp("fine_calculated_date"),
+                        rs.getString("payment_status"),
+                        rs.getTimestamp("payment_date"),
+                        rs.getObject("waived_by") != null ? rs.getInt("waived_by") : null,
+                        rs.getString("waived_reason")
+                ));
+            }
+        }
+
+        return fines;
+    }
+
+
 
 }
