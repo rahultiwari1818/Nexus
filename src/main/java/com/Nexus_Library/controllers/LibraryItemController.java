@@ -186,21 +186,22 @@ public class LibraryItemController {
                 return;
             }
 
-            System.out.printf("%-5s %-20s %-30s %-20s %-15s %-12s %-20s %-20s%n",
-                    "ID","Type", "Title", "Author", "ISBN", "Available", "Added Date", "Type");
+            System.out.printf("%-5s %-20s %-50s %-20s %-15s %-12s %-20s%n",
+                    "ID","Type", "Title", "Author", "ISBN", "Available", "Added Date");
             System.out.println("----------------------------------------------------------------------------------------------------------------------------------------------------------");
 
             for (LibraryItem item : items) {
-                System.out.printf("%-5d %-20s %-30s %-20s %-15s %-12s %-20s %-20s%n",
+                System.out.printf("%-5d %-20s %-50s %-20s %-15s %-12s %-20s%n",
                         item.getItemId(),
                         item.getItemType(),
                         item.getTitle(),
                         item.getAuthor() != null ? item.getAuthor() : "N/A",
                         item.getIsbn() != null ? item.getIsbn() : "N/A",
                         item.isAvailable() ? "Yes" : "No",
-                        item.getAddedDate().toString(),
-                        item.getItemType());
+                        item.getAddedDate().toString());
+                        //item.getItemType());
             }
+
 
         } catch (Exception e) {
             System.out.println("❌ An error occurred while searching for library items.");
